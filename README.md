@@ -75,3 +75,7 @@ These are documented in `WebViewEnvironmentFactory.cs` and `WebLoginWindow.xaml.
 * **Multi-instance:** this depends on Roblox client internals (the `ROBLOX_singletonMutex` / `ROBLOX_singletonEvent` names) and can break when Roblox updates. Start the manager before any Roblox client is running. Roblox's anti-tamper does not currently flag holding the mutex, but this isn't guaranteed.
 * **ToS:** use only accounts you own, and keep to Roblox's Terms of Use. Automating gameplay across alts can still get accounts actioned, even if launching them is allowed.
 * Avatar images load straight from Roblox's CDN URLs and are not cached on disk.
+
+## Development
+
+Claude Code / Codex assisted.
