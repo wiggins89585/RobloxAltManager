@@ -1,12 +1,12 @@
 # Roblox Alt Manager (WPF / .NET 8)
 
-Manage several Roblox accounts you own: import cookies or log in through an embedded browser that renders FunCaptcha properly, keep cookies encrypted at rest, organize accounts with notes and custom groups, and launch many clients at once with staggered starts, PID tracking and window tiling.
+Manage several Roblox accounts you own: import cookies or log in through an embedded browser that renders FunCaptcha properly, browse Roblox in the account manager's dark theme, keep cookies encrypted at rest, organize accounts with notes and custom groups, and launch many clients at once with staggered starts, PID tracking and window tiling.
 
 ## Releases
 
 Download the Windows x64 package from [GitHub Releases](../../releases/latest). The package requires the .NET 8 Desktop Runtime and WebView2 Runtime.
 
-Release builds check GitHub Releases at startup and ask before downloading and installing a newer version. The setting is enabled by default and can be changed under **Settings → Updates**. Updates verify the published SHA-256 digest and require write access to the install folder. Version 1.0.0 cannot update itself; install version 1.0.1 once to enable automatic updates.
+Release builds check GitHub Releases at startup and ask before downloading and installing a newer version. The setting is enabled by default and can be changed under **Settings → Updates**. Updates verify the published SHA-256 digest, confirm the installed version before restarting, and require write access to the install folder. Version 1.0.0 cannot update itself; install version 1.0.1 once to enable automatic updates.
 
 ## Build
 

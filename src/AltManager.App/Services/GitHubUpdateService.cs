@@ -118,10 +118,16 @@ public sealed class GitHubUpdateService
         foreach (var argument in new[]
         {
             "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
-            Environment.ProcessId.ToString(), installDirectory, update.StagingDirectory, update.UpdateDirectory,
-            executablePath, usePasswordVault.ToString()
+            "-ParentProcessId", Environment.ProcessId.ToString(),
+            "-InstallDirectory", installDirectory,
+            "-StagingDirectory", update.StagingDirectory,
+            "-UpdateDirectory", update.UpdateDirectory,
+            "-ExecutablePath", executablePath,
+            "-ExpectedVersion", update.Version.ToString(3)
         })
             startInfo.ArgumentList.Add(argument);
+        if (usePasswordVault)
+            startInfo.ArgumentList.Add("-UsePasswordVault");
 
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start the update helper.");
@@ -168,23 +174,55 @@ public sealed class GitHubUpdateService
             [string]$StagingDirectory,
             [string]$UpdateDirectory,
             [string]$ExecutablePath,
-            [bool]$UsePasswordVault
+            [string]$ExpectedVersion,
+            [switch]$UsePasswordVault
         )
 
         $ErrorActionPreference = 'Stop'
         try {
-            while (Get-Process -Id $ParentProcessId -ErrorAction SilentlyContinue) {
-                Start-Sleep -Milliseconds 500
+            $parentProcess = Get-Process -Id $ParentProcessId -ErrorAction SilentlyContinue
+            if ($parentProcess) {
+                $parentProcess.WaitForExit()
             }
 
-            Get-ChildItem -LiteralPath $StagingDirectory -Force | ForEach-Object {
-                Copy-Item -LiteralPath $_.FullName -Destination $InstallDirectory -Recurse -Force
+            $targetVersion = $ExpectedVersion
+            $installedVersion = $null
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+                try {
+                    Get-ChildItem -LiteralPath $StagingDirectory -Force | ForEach-Object {
+                        Copy-Item -LiteralPath $_.FullName -Destination $InstallDirectory -Recurse -Force
+                    }
+
+                    $installedVersion = [System.Reflection.AssemblyName]::GetAssemblyName(
+                        (Join-Path $InstallDirectory 'AltManager.dll')
+                    ).Version.ToString(3)
+                    if ($installedVersion -eq $targetVersion) {
+                        break
+                    }
+                    throw "Installed version $installedVersion does not match expected version $targetVersion."
+                } catch {
+                    if ($attempt -eq 29) {
+                        throw "Could not install version $targetVersion after 30 attempts. $($_.Exception.Message)"
+                    }
+                    Start-Sleep -Milliseconds 500
+                }
+            }
+
+            if ($installedVersion -ne $targetVersion) {
+                throw "Installed version $installedVersion does not match expected version $targetVersion."
             }
 
             if ($UsePasswordVault) {
-                Start-Process -FilePath $ExecutablePath -WorkingDirectory $InstallDirectory -ArgumentList '--password-vault'
+                $appProcess = Start-Process -FilePath $ExecutablePath -WorkingDirectory $InstallDirectory `
+                    -ArgumentList '--password-vault' -PassThru
             } else {
-                Start-Process -FilePath $ExecutablePath -WorkingDirectory $InstallDirectory
+                $appProcess = Start-Process -FilePath $ExecutablePath -WorkingDirectory $InstallDirectory -PassThru
+            }
+
+            Start-Sleep -Seconds 3
+            $appProcess.Refresh()
+            if ($appProcess.HasExited) {
+                throw "Version $targetVersion was installed, but the app exited during startup."
             }
 
             Remove-Item -LiteralPath $UpdateDirectory -Recurse -Force

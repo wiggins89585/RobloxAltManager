@@ -25,7 +25,8 @@
 
         <DockPanel>
             <!-- ================= Custom title bar ================= -->
-            <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Height="38">
+            <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Height="38"
+                    BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
                 <DockPanel>
                     <!-- Window caption buttons -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">

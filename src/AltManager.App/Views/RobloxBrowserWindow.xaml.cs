@@ -13,6 +13,93 @@ namespace AltManager.App.Views;
 public partial class RobloxBrowserWindow : Window
 {
     private const string Home = "https://www.roblox.com/home";
+    private const string RobloxDarkThemeScript = """
+        (() => {
+            const host = location.hostname.toLowerCase();
+            if (host !== "roblox.com" && !host.endsWith(".roblox.com")) return;
+
+            const styleId = "__alt_manager_theme";
+            const css = `
+                :root {
+                    color-scheme: dark !important;
+                    --color-background: #1e1f22 !important;
+                    --color-surface: #2b2d31 !important;
+                    --color-text: #dbdee1 !important;
+                }
+
+                body :where(*) {
+                    background-color: transparent !important;
+                    border-color: #3f4147 !important;
+                    color: #dbdee1 !important;
+                }
+
+                html, body, #wrap, #rbx-body, #container-main, .container-main,
+                .container-fluid, main, [role="main"] {
+                    background-color: #1e1f22 !important;
+                    color: #dbdee1 !important;
+                }
+
+                .rbx-header, #header, #navContent, .navbar, .navbar-fixed-top,
+                nav, [role="navigation"] {
+                    background-color: #2b2d31 !important;
+                    border-color: #3f4147 !important;
+                    color: #dbdee1 !important;
+                }
+
+                .game-card, [class*="game-card"], [class*="card"], [class*="tile"],
+                [class*="panel"], [class*="banner"], [class*="section"],
+                .modal-content, .dropdown-menu, .popover, .well {
+                    background-color: #2b2d31 !important;
+                    border-color: #3f4147 !important;
+                    color: #dbdee1 !important;
+                }
+
+                small, .text-muted, .text-secondary, .text-description {
+                    color: #949ba4 !important;
+                }
+
+                a {
+                    color: #a5adff !important;
+                }
+
+                input, select, textarea, [contenteditable="true"] {
+                    background-color: #1e1f22 !important;
+                    border-color: #3f4147 !important;
+                    color: #dbdee1 !important;
+                }
+
+                button, .btn, [role="button"] {
+                    background-color: #383a40 !important;
+                    border-color: #3f4147 !important;
+                    color: #dbdee1 !important;
+                }
+
+                .btn-primary, [class*="btn-primary"] {
+                    background-color: #5865f2 !important;
+                    border-color: #5865f2 !important;
+                    color: #ffffff !important;
+                }
+            `;
+
+            const injectTheme = () => {
+                if (!document.documentElement) return false;
+                if (!document.getElementById(styleId)) {
+                    const style = document.createElement("style");
+                    style.id = styleId;
+                    style.textContent = css;
+                    (document.head || document.documentElement).appendChild(style);
+                }
+                return true;
+            };
+
+            if (!injectTheme()) {
+                const observer = new MutationObserver(() => {
+                    if (injectTheme()) observer.disconnect();
+                });
+                observer.observe(document, { childList: true, subtree: true });
+            }
+        })();
+        """;
     private readonly string _cookie;
     private readonly string _profileKey;
 
@@ -48,6 +135,7 @@ public partial class RobloxBrowserWindow : Window
         var core = Browser.CoreWebView2;
         core.Settings.AreDevToolsEnabled = false;
         core.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.None;
+        await core.AddScriptToExecuteOnDocumentCreatedAsync(RobloxDarkThemeScript);
 
         // Inject the auth cookie for roblox.com before navigating, so the first load is already logged in.
         var cm = core.CookieManager;
