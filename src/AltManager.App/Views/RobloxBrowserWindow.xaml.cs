@@ -18,31 +18,76 @@ public partial class RobloxBrowserWindow : Window
             const host = location.hostname.toLowerCase();
             if (host !== "roblox.com" && !host.endsWith(".roblox.com")) return;
 
-            const styleId = "__alt_manager_theme";
+            const styleId = "__alt_manager_theme_v2";
             const css = `
-                html, body {
+                :root {
+                    color-scheme: dark;
+                    --color-background: #1e1f22;
+                    --color-surface: #2b2d31;
+                    --color-text-primary: #dbdee1;
+                    --color-text-secondary: #b5bac1;
+                    --color-border: #3f4147;
+                    --color-primary: #5865f2;
+                }
+
+                html, body, #wrap, #rbx-body, #container-main, .container-main,
+                #content, main, [role="main"] {
                     background-color: #1e1f22 !important;
+                }
+
+                h1, h2, h3, h4, h5, h6, p, label,
+                .text, .text-name, .text-description, .text-secondary, .text-muted,
+                .game-card-name, .game-card-info, .font-caption-header, .font-caption-body,
+                [class*="font-header"], [class*="font-body"],
+                [class*="text-name"], [class*="text-description"],
+                [class*="game-card-name"], [class*="game-card-info"] {
                     color: #dbdee1 !important;
                 }
 
-                #wrap, #rbx-body, #container-main, .container-main, main, [role="main"] {
-                    background-color: transparent !important;
+                small, .text-muted, .text-secondary, .text-description,
+                [class*="text-secondary"], [class*="text-muted"] {
+                    color: #b5bac1 !important;
+                }
+
+                .section, .section-content, .tab-content,
+                [class*="panel"], [class*="card"]:not([class*="game-card"]),
+                .modal-content, .dropdown-menu, .popover, .well {
+                    background-color: #2b2d31 !important;
+                    border-color: #3f4147 !important;
                 }
 
                 .rbx-header, #header, #navContent {
                     background-color: #2b2d31 !important;
                     border-color: #3f4147 !important;
                 }
+
+                .rbx-header a:not([class*="icon"]):not([class*="glyph"]),
+                #header a:not([class*="icon"]):not([class*="glyph"]) {
+                    color: #dbdee1 !important;
+                }
+
+                .form-control, .rbx-input-field, input:not([type="checkbox"]):not([type="radio"]),
+                select, textarea, [contenteditable="true"] {
+                    background-color: #1e1f22 !important;
+                    border-color: #3f4147 !important;
+                    color: #dbdee1 !important;
+                }
+
+                input::placeholder, textarea::placeholder {
+                    color: #b5bac1 !important;
+                    opacity: 1;
+                }
             `;
 
             const injectTheme = () => {
                 if (!document.documentElement) return false;
-                if (!document.getElementById(styleId)) {
-                    const style = document.createElement("style");
+                let style = document.getElementById(styleId);
+                if (!style) {
+                    style = document.createElement("style");
                     style.id = styleId;
-                    style.textContent = css;
                     (document.head || document.documentElement).appendChild(style);
                 }
+                style.textContent = css;
                 return true;
             };
 

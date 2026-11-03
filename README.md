@@ -1,6 +1,6 @@
 # Roblox Alt Manager (WPF / .NET 8)
 
-Manage several Roblox accounts you own: import cookies or log in through an embedded browser that renders FunCaptcha properly, browse Roblox with a subtle account-manager dark background while preserving Roblox's own controls and icons, keep cookies encrypted at rest, organize accounts with notes and custom groups, and launch many clients at once with staggered starts, PID tracking and window tiling.
+Manage several Roblox accounts you own: import cookies or log in through an embedded browser that renders FunCaptcha properly, browse Roblox with a readable account-manager dark theme while preserving Roblox's own controls, icons, and imagery, keep cookies encrypted at rest, organize accounts with notes and custom groups, and launch many clients at once with staggered starts, PID tracking and window tiling.
 
 ## Releases
 
