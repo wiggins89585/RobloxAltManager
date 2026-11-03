@@ -20,64 +20,18 @@ public partial class RobloxBrowserWindow : Window
 
             const styleId = "__alt_manager_theme";
             const css = `
-                :root {
-                    color-scheme: dark !important;
-                    --color-background: #1e1f22 !important;
-                    --color-surface: #2b2d31 !important;
-                    --color-text: #dbdee1 !important;
+                html, body {
+                    background-color: #1e1f22 !important;
+                    color: #dbdee1 !important;
                 }
 
-                body :where(*) {
+                #wrap, #rbx-body, #container-main, .container-main, main, [role="main"] {
                     background-color: transparent !important;
-                    border-color: #3f4147 !important;
-                    color: #dbdee1 !important;
                 }
 
-                html, body, #wrap, #rbx-body, #container-main, .container-main,
-                .container-fluid, main, [role="main"] {
-                    background-color: #1e1f22 !important;
-                    color: #dbdee1 !important;
-                }
-
-                .rbx-header, #header, #navContent, .navbar, .navbar-fixed-top,
-                nav, [role="navigation"] {
+                .rbx-header, #header, #navContent {
                     background-color: #2b2d31 !important;
                     border-color: #3f4147 !important;
-                    color: #dbdee1 !important;
-                }
-
-                .game-card, [class*="game-card"], [class*="card"], [class*="tile"],
-                [class*="panel"], [class*="banner"], [class*="section"],
-                .modal-content, .dropdown-menu, .popover, .well {
-                    background-color: #2b2d31 !important;
-                    border-color: #3f4147 !important;
-                    color: #dbdee1 !important;
-                }
-
-                small, .text-muted, .text-secondary, .text-description {
-                    color: #949ba4 !important;
-                }
-
-                a {
-                    color: #a5adff !important;
-                }
-
-                input, select, textarea, [contenteditable="true"] {
-                    background-color: #1e1f22 !important;
-                    border-color: #3f4147 !important;
-                    color: #dbdee1 !important;
-                }
-
-                button, .btn, [role="button"] {
-                    background-color: #383a40 !important;
-                    border-color: #3f4147 !important;
-                    color: #dbdee1 !important;
-                }
-
-                .btn-primary, [class*="btn-primary"] {
-                    background-color: #5865f2 !important;
-                    border-color: #5865f2 !important;
-                    color: #ffffff !important;
                 }
             `;
 
