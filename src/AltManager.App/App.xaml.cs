@@ -78,11 +78,12 @@ public partial class App : Application
         if (!settings.AutoUpdateEnabled)
             return;
 
-        PreparedUpdate? update;
+        var updater = new GitHubUpdateService();
+        AvailableUpdate? availableUpdate;
         try
         {
             var currentVersion = typeof(App).Assembly.GetName().Version ?? new Version(1, 0);
-            update = await new GitHubUpdateService().DownloadLatestAsync(currentVersion, _shutdown.Token);
+            availableUpdate = await updater.CheckForUpdateAsync(currentVersion, _shutdown.Token);
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
@@ -108,6 +109,37 @@ public partial class App : Application
             MessageBox.Show(owner, ex.Message, "Update unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
+
+        if (availableUpdate is null || _shutdown.IsCancellationRequested)
+            return;
+
+        var confirmation = MessageBox.Show(owner,
+            $"A new update has been detected. Would you like to update to ver {availableUpdate.Version.ToString(3)}?",
+            "Update available", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes || _shutdown.IsCancellationRequested)
+            return;
+
+        PreparedUpdate update;
+        try
+        {
+            update = await updater.DownloadAsync(availableUpdate, _shutdown.Token);
+        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Trace.WriteLine($"Update download timed out: {ex.Message}");
+            MessageBox.Show(owner, "The update download timed out. Try again later.",
+                "Update failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        catch (InvalidDataException ex)
+        {
+            MessageBox.Show(owner, ex.Message, "Update unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         catch (IOException ex)
         {
             MessageBox.Show(owner, $"Could not download or unpack the update: {ex.Message}",
@@ -126,12 +158,9 @@ public partial class App : Application
             return;
         }
 
-        if (update is null || _shutdown.IsCancellationRequested)
-            return;
-
         try
         {
-            new GitHubUpdateService().StartApply(update, usePasswordVault);
+            updater.StartApply(update, usePasswordVault);
             MessageBox.Show(owner,
                 $"Update {update.Version.ToString(3)} is ready. The app will restart to install it.",
                 "Roblox Alt Manager update", MessageBoxButton.OK, MessageBoxImage.Information);

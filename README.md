@@ -6,7 +6,7 @@ Manage several Roblox accounts you own: import cookies or log in through an embe
 
 Download the Windows x64 package from [GitHub Releases](../../releases/latest). The package requires the .NET 8 Desktop Runtime and WebView2 Runtime.
 
-Release builds check GitHub Releases at startup and install newer versions automatically. The setting is enabled by default and can be changed under **Settings → Updates**. Updates verify the published SHA-256 digest and require write access to the install folder. Version 1.0.0 cannot update itself; install version 1.0.1 once to enable automatic updates.
+Release builds check GitHub Releases at startup and ask before downloading and installing a newer version. The setting is enabled by default and can be changed under **Settings → Updates**. Updates verify the published SHA-256 digest and require write access to the install folder. Version 1.0.0 cannot update itself; install version 1.0.1 once to enable automatic updates.
 
 ## Build
 

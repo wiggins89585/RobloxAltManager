@@ -14,7 +14,7 @@ public sealed class GitHubUpdateService
     private const string ReleaseApiUrl = "https://api.github.com/repos/wiggins89585/RobloxAltManager/releases/latest";
     private static readonly HttpClient Http = CreateHttpClient();
 
-    public async Task<PreparedUpdate?> DownloadLatestAsync(Version currentVersion, CancellationToken cancellationToken)
+    public async Task<AvailableUpdate?> CheckForUpdateAsync(Version currentVersion, CancellationToken cancellationToken)
     {
         using var response = await Http.GetAsync(ReleaseApiUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -38,16 +38,33 @@ public sealed class GitHubUpdateService
             digest.Length != 71)
             throw new InvalidDataException("GitHub release has no valid SHA-256 package digest.");
 
+        byte[] expectedDigest;
+        try
+        {
+            expectedDigest = Convert.FromHexString(digest["sha256:".Length..]);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidDataException("GitHub release has an invalid SHA-256 digest.", ex);
+        }
+        if (expectedDigest.Length != 32)
+            throw new InvalidDataException("GitHub release has an invalid SHA-256 digest.");
+
+        return new AvailableUpdate(releaseVersion, assetName, downloadUri, digest);
+    }
+
+    public async Task<PreparedUpdate> DownloadAsync(AvailableUpdate update, CancellationToken cancellationToken)
+    {
         var updatesRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AltManager", "Updates");
         var updateDirectory = Path.Combine(updatesRoot, Guid.NewGuid().ToString("N"));
-        var packagePath = Path.Combine(updateDirectory, assetName);
+        var packagePath = Path.Combine(updateDirectory, update.AssetName);
         var stagingDirectory = Path.Combine(updateDirectory, "staged");
         Directory.CreateDirectory(stagingDirectory);
 
         try
         {
-            using var packageResponse = await DownloadPackageAsync(downloadUri, cancellationToken);
+            using var packageResponse = await DownloadPackageAsync(update.DownloadUri, cancellationToken);
             await using var source = await packageResponse.Content.ReadAsStreamAsync(cancellationToken);
             await using var destination = new FileStream(packagePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
             await source.CopyToAsync(destination, cancellationToken);
@@ -59,15 +76,7 @@ public sealed class GitHubUpdateService
 
         await using var packageStream = File.OpenRead(packagePath);
         var actualDigest = await SHA256.HashDataAsync(packageStream, cancellationToken);
-        byte[] expectedDigest;
-        try
-        {
-            expectedDigest = Convert.FromHexString(digest["sha256:".Length..]);
-        }
-        catch (FormatException ex)
-        {
-            throw new InvalidDataException("GitHub release has an invalid SHA-256 digest.", ex);
-        }
+        var expectedDigest = Convert.FromHexString(update.Digest["sha256:".Length..]);
         if (!CryptographicOperations.FixedTimeEquals(actualDigest, expectedDigest))
             throw new InvalidDataException("Downloaded update package failed its SHA-256 check.");
 
@@ -75,7 +84,7 @@ public sealed class GitHubUpdateService
         if (!File.Exists(Path.Combine(stagingDirectory, "AltManager.exe")))
             throw new InvalidDataException("Update package does not contain AltManager.exe.");
 
-        return new PreparedUpdate(releaseVersion, updateDirectory, stagingDirectory);
+        return new PreparedUpdate(update.Version, updateDirectory, stagingDirectory);
     }
 
     public Process StartApply(PreparedUpdate update, bool usePasswordVault)
@@ -213,3 +222,4 @@ public sealed class GitHubUpdateService
 }
 
 public sealed record PreparedUpdate(Version Version, string UpdateDirectory, string StagingDirectory);
+public sealed record AvailableUpdate(Version Version, string AssetName, Uri DownloadUri, string Digest);
