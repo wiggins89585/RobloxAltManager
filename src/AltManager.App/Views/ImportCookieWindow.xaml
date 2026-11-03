@@ -1,0 +1,27 @@
+<Window x:Class="AltManager.App.Views.ImportCookieWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Import .ROBLOSECURITY Cookie" Width="560" Height="300"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="#1E1F22" Foreground="#DBDEE1">
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="Paste one cookie per line (raw value, '.ROBLOSECURITY=…', or a whole Cookie header). Only import cookies for accounts you own."/>
+        <TextBox x:Name="CookieBox" Grid.Row="1" AcceptsReturn="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="Group:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <ComboBox x:Name="GroupCombo" Width="180" IsEditable="True"/>
+        </StackPanel>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Import" Width="90" IsDefault="True" Click="Import_Click" Margin="0,0,8,0"/>
+            <Button Content="Cancel" Width="90" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

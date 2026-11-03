@@ -1,0 +1,112 @@
+using AltManager.Core.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace AltManager.App.ViewModels;
+
+/// <summary>Bindable wrapper. Edits to Alias/Group write through to the model; the shell VM persists.</summary>
+public partial class AccountViewModel : ObservableObject
+{
+    public Account Model { get; }
+
+    public AccountViewModel(Account model) => Model = model;
+
+    /// <summary>When on, usernames and IDs are masked in the UI (for streaming/screen-sharing).</summary>
+    public static bool Masked { get; set; }
+
+    public long UserId => Model.UserId;
+    public string Username => Mask(Model.Username);
+    public string DisplayName => Model.DisplayName;
+    public string Label => Mask(Model.Label);
+    public string UserIdText => Masked ? "•••••••" : Model.UserId.ToString();
+
+    private static string Mask(string s) =>
+        !Masked || string.IsNullOrEmpty(s) ? s : s[0] + new string('•', Math.Max(3, s.Length - 1));
+
+    public string Notes
+    {
+        get => Model.Notes;
+        set { if (Model.Notes != value) { Model.Notes = value ?? ""; OnPropertyChanged(); OnPropertyChanged(nameof(HasNotes)); Changed?.Invoke(this); } }
+    }
+    public bool HasNotes => !string.IsNullOrWhiteSpace(Model.Notes);
+
+    public bool Favorite
+    {
+        get => Model.Favorite;
+        set { if (Model.Favorite != value) { Model.Favorite = value; OnPropertyChanged(); Changed?.Invoke(this); } }
+    }
+
+    /// <summary>"3m ago" / "never" — how long since the cookie was last confirmed.</summary>
+    public string LastCheckedText
+    {
+        get
+        {
+            if (Model.LastValidated is not { } t) return "never checked";
+            var d = DateTimeOffset.UtcNow - t;
+            return d < TimeSpan.FromMinutes(1) ? "just now"
+                : d < TimeSpan.FromHours(1) ? $"{(int)d.TotalMinutes}m ago"
+                : d < TimeSpan.FromDays(1) ? $"{(int)d.TotalHours}h ago"
+                : $"{(int)d.TotalDays}d ago";
+        }
+    }
+
+    /// <summary>Re-reads display fields after a masking or validation change.</summary>
+    public void RefreshDisplay()
+    {
+        OnPropertyChanged(nameof(Username));
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(UserIdText));
+        OnPropertyChanged(nameof(LastCheckedText));
+    }
+
+    public string Alias
+    {
+        get => Model.Alias;
+        set { if (Model.Alias != value) { Model.Alias = value; OnPropertyChanged(); OnPropertyChanged(nameof(Label)); Changed?.Invoke(this); } }
+    }
+
+    public string Group
+    {
+        get => Model.Group;
+        set { if (Model.Group != value) { Model.Group = string.IsNullOrWhiteSpace(value) ? "Ungrouped" : value.Trim(); OnPropertyChanged(); Changed?.Invoke(this); } }
+    }
+
+    public string GameOverride
+    {
+        get => Model.GameOverride;
+        set
+        {
+            var v = value?.Trim() ?? "";
+            if (Model.GameOverride != v) { Model.GameOverride = v; OnPropertyChanged(); OnPropertyChanged(nameof(GameLabel)); Changed?.Invoke(this); }
+        }
+    }
+
+    /// <summary>Short text for the card view: the account's own game, or a hint that it uses the default.</summary>
+    public string GameLabel => string.IsNullOrWhiteSpace(Model.GameOverride) ? "Default game" : Model.GameOverride;
+
+    public bool HasPassword => !string.IsNullOrEmpty(Model.EncryptedPassword);
+
+    public AccountStatus Status
+    {
+        get => Model.Status;
+        set { if (Model.Status != value) { Model.Status = value; OnPropertyChanged(); } }
+    }
+
+    [ObservableProperty] private string? _avatarUrl;
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private string _launchState = "";
+    [ObservableProperty] private int? _pid;
+
+    /// <summary>Raised when a persisted field changes, so the vault can be saved.</summary>
+    public event Action<AccountViewModel>? Changed;
+
+    public void Refresh()
+    {
+        OnPropertyChanged(nameof(Username));
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(HasPassword));
+        OnPropertyChanged(nameof(UserIdText));
+        OnPropertyChanged(nameof(LastCheckedText));
+    }
+}

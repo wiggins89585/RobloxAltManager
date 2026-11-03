@@ -1,0 +1,473 @@
+<Window x:Class="AltManager.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:AltManager.App.ViewModels"
+        xmlns:core="clr-namespace:AltManager.Core.Launch;assembly=AltManager.Core"
+        Title="Roblox Alt Manager" Width="920" Height="500" MinWidth="820" MinHeight="420"
+        Background="{StaticResource Bg}" Foreground="{StaticResource Fg}"
+        d:DataContext="{d:DesignInstance vm:MainViewModel}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <!-- Shared by list rows and grid cards. The host's Tag holds the MainViewModel (menus live outside the
+             visual tree, so they can't find the window); the menu's DataContext is the account itself. -->
+        <ContextMenu x:Key="AccountMenu" x:Shared="False">
+            <TextBlock Text="ACCOUNT" Style="{StaticResource MenuHeader}"/>
+            <MenuItem Header="🌐  Open in browser" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.OpenBrowserCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="↻  Re-check status" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.RecheckAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="🔑  Re-login" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.ReloginAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="★  Toggle favorite" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="✎  Edit note…" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.EditNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="⌸  Set group…" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.SetGroupForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <TextBlock Text="COPY" Style="{StaticResource MenuHeader}"/>
+            <MenuItem Header="user:pass" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
+                      Command="{Binding PlacementTarget.Tag.CopyUserPassCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Username" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.CopyUsernameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Password" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
+                      Command="{Binding PlacementTarget.Tag.CopyPasswordCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Roblox ID" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.CopyUserIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Profile link" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.CopyProfileLinkCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <TextBlock Text="GAME" Style="{StaticResource MenuHeader}"/>
+            <MenuItem Header="Join the Launch panel's game" CommandParameter="{Binding}"
+                      ToolTip="Gives this account (or every checked account) its own game: the one typed in the Launch panel"
+                      Command="{Binding PlacementTarget.Tag.UseLaunchGameForAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Clear own game" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.ClearAccountGameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
+    </Window.Resources>
+
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Ctrl+Shift" Key="Q" Command="{Binding PanicCloseCommand}"/>
+    </Window.InputBindings>
+
+    <!-- Maximized borderless windows overhang the screen by the resize border; pad it back in. -->
+    <Border BorderBrush="{StaticResource Line}">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderThickness" Value="1"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                        <Setter Property="Margin" Value="7"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+
+    <DockPanel>
+        <!-- ================= Title bar + toolbar ================= -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Height="36">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Minimize"/>
+                    <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Maximize_Click" ToolTip="Maximize"/>
+                    <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Content="&#xE7B3;" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource CaptionButton}"
+                            ToolTip="Streamer mode — mask usernames and IDs"/>
+                    <Button Content="&#xE713;" Command="{Binding OpenSettingsCommand}" Style="{StaticResource CaptionButton}"
+                            ToolTip="Settings"/>
+                    <Ellipse Width="8" Height="8" Margin="8,0,0,0" VerticalAlignment="Center"
+                             ToolTip="Multi-instance mode (green = active)">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#F23F43"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding MultiInstanceActive}" Value="True">
+                                        <Setter Property="Fill" Value="#23A55A"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                </StackPanel>
+
+                <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="12,0,14,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Content="＋ Cookie" Command="{Binding ImportCookiesCommand}"
+                            ToolTip="Import .ROBLOSECURITY cookies"/>
+                    <Button Content="🌐 Login" Command="{Binding BrowserLoginCommand}"
+                            ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
+                    <Button Content="👥 Bulk" Command="{Binding BulkLoginCommand}"
+                            ToolTip="Log in several accounts from a user:pass,user:pass list"/>
+                    <Button Content="✔ Validate" Command="{Binding ValidateAllCommand}"
+                            ToolTip="Re-check every account's cookie"/>
+                    <Button Content="🗑 Remove" Command="{Binding RemoveSelectedCommand}"
+                            ToolTip="Remove the selected accounts"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ================= Status bar (hidden when idle) ================= -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource Bg}" Padding="10,3"
+                Visibility="{Binding HasStatus, Converter={StaticResource BoolVis}}">
+            <DockPanel>
+                <ProgressBar DockPanel.Dock="Right" Width="100" Height="6" IsIndeterminate="True"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="{StaticResource Muted}"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="8,2,8,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding ShowGroups, Converter={StaticResource BoolWidth}, ConverterParameter=120}"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="{Binding ShowLaunch, Converter={StaticResource BoolWidth}, ConverterParameter=250}"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ================= Groups ================= -->
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="4,8,4,4" Margin="0,0,8,0"
+                    Visibility="{Binding ShowGroups, Converter={StaticResource BoolVis}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="GROUPS" Style="{StaticResource Label}" Margin="6,0,0,4"/>
+                    <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" FontSize="12"
+                             Background="Transparent" Foreground="{StaticResource Fg}" BorderThickness="0"/>
+                </DockPanel>
+            </Border>
+
+            <!-- ================= Accounts ================= -->
+            <DockPanel Grid.Column="1">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <ToggleButton DockPanel.Dock="Left" Style="{StaticResource PanelToggle}" Content="Groups" Margin="0,0,4,0"
+                                  IsChecked="{Binding ShowGroups}" ToolTip="Show/hide the groups sidebar"/>
+                    <ToggleButton DockPanel.Dock="Left" Style="{StaticResource PanelToggle}" Content="Launch" Margin="0,0,8,0"
+                                  IsChecked="{Binding ShowLaunch}" ToolTip="Show/hide the launch sidebar"/>
+
+                    <Button DockPanel.Dock="Right" Content="Select / clear visible" Margin="4,0,0,0"
+                            Command="{Binding SelectAllVisibleCommand}"/>
+
+                    <!-- Columns (grid view only) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0,0,0"
+                                Visibility="{Binding IsGridView, Converter={StaticResource BoolVis}}"
+                                ToolTip="Cards per row (0 = fit to width)">
+                        <TextBlock Text="Cols" FontSize="11" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBox Width="32" Text="{Binding CardColumns, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+
+                    <Border DockPanel.Dock="Right" Background="{StaticResource Bg}" CornerRadius="5" Padding="2" Margin="4,0,0,0"
+                            BorderBrush="{StaticResource Line}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Style="{StaticResource ToggleSeg}" Content="☰" ToolTip="List view" GroupName="View"
+                                         IsChecked="{Binding IsGridView, Mode=OneWay, Converter={StaticResource NotBool}}"
+                                         Command="{Binding ShowListCommand}"/>
+                            <RadioButton Style="{StaticResource ToggleSeg}" Content="▦" ToolTip="Grid view" GroupName="View"
+                                         IsChecked="{Binding IsGridView, Mode=OneWay}"
+                                         Command="{Binding ShowGridCommand}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ComboBox DockPanel.Dock="Right" Width="92" Margin="4,0,0,0" VerticalAlignment="Center"
+                              ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}"
+                              ToolTip="Show only accounts with this status"/>
+
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Filter by username, alias or user ID"/>
+                </DockPanel>
+
+                <Grid>
+                <!-- ================= Grid (cards) view ================= -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsGridView, Converter={StaticResource BoolVis}}">
+                    <ItemsControl ItemsSource="{Binding AccountsView}">
+                        <ItemsControl.Style>
+                            <Style TargetType="ItemsControl">
+                                <Setter Property="ItemsPanel">
+                                    <Setter.Value>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="{Binding DataContext.CardColumns, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                         VerticalAlignment="Top"/>
+                                        </ItemsPanelTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CardColumns}" Value="0">
+                                        <Setter Property="ItemsPanel">
+                                            <Setter.Value>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel ItemWidth="{Binding DataContext.CardWidth, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </ItemsPanelTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:AccountViewModel">
+                                <Border Margin="0,0,6,6" Padding="8" CornerRadius="6" Cursor="Hand" BorderThickness="1"
+                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        ContextMenu="{StaticResource AccountMenu}"
+                                        MouseLeftButtonUp="Card_MouseLeftButtonUp"
+                                        ToolTip="{Binding Username}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource Panel}"/>
+                                            <Setter Property="BorderBrush" Value="Transparent"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#313338"/>
+                                                </Trigger>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#33386A"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="★" FontSize="12" Foreground="#F0B232"
+                                                   VerticalAlignment="Top"
+                                                   Visibility="{Binding Favorite, Converter={StaticResource BoolVis}}"/>
+                                        <Border DockPanel.Dock="Left" Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
+                                                Background="{StaticResource Raised}" Margin="0,0,8,0" VerticalAlignment="Top">
+                                            <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                         Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusText}}" FontSize="10"
+                                                           Foreground="{StaticResource Muted}"/>
+                                                <TextBlock Text="✎" FontSize="10" Margin="5,0,0,0" Foreground="{StaticResource Muted}"
+                                                           ToolTip="{Binding Notes}"
+                                                           Visibility="{Binding HasNotes, Converter={StaticResource BoolVis}}"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding GameLabel}" FontSize="10" Foreground="{StaticResource Muted}"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- ================= List view ================= -->
+                <Border CornerRadius="6" ClipToBounds="True" Background="{StaticResource Panel}"
+                        Visibility="{Binding IsGridView, Converter={StaticResource BoolVisInv}}">
+                <DataGrid ItemsSource="{Binding AccountsView}" AutoGenerateColumns="False"
+                          CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
+                          RowHeight="38" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource Line}"
+                          SelectionMode="Extended" FontSize="12"
+                          Background="{StaticResource Panel}" RowBackground="{StaticResource Panel}"
+                          Foreground="{StaticResource Fg}" BorderThickness="0">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="Row_PreviewMouseLeftButtonDown"/>
+                            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                            <Setter Property="ContextMenu" Value="{StaticResource AccountMenu}"/>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="30">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:AccountViewModel">
+                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="" Width="40">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:AccountViewModel">
+                                    <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Background="{StaticResource Raised}">
+                                        <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="ACCOUNT" Width="2*" MinWidth="120" SortMemberPath="Username">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:AccountViewModel">
+                                    <StackPanel VerticalAlignment="Center" ToolTip="{Binding Username}">
+                                        <TextBlock Text="{Binding Username}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Foreground="{StaticResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis">
+                                            <Run Text="ID"/> <Run Text="{Binding UserIdText, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="ALIAS" Width="1*"
+                                            Binding="{Binding Alias, UpdateSourceTrigger=LostFocus}">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTemplateColumn Header="GROUP" Width="110" SortMemberPath="Group">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:AccountViewModel">
+                                    <ComboBox IsEditable="True" VerticalAlignment="Center" FontSize="12"
+                                              Text="{Binding Group, UpdateSourceTrigger=LostFocus}"
+                                              ItemsSource="{Binding DataContext.Groups, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="STATUS" Width="80" SortMemberPath="Status">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:AccountViewModel">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                 Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                        <TextBlock Text="{Binding Status, Converter={StaticResource StatusText}}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="GAME" Width="1.2*"
+                                            Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus}">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+                                    <Setter Property="ToolTip" Value="Per-account game (blank = Launch panel's game). Place ID or game/server link."/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="LAUNCH" Width="1*" IsReadOnly="True"
+                                            Binding="{Binding LaunchState}" Foreground="{StaticResource Muted}">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="ToolTip" Value="{Binding LaunchState}"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                </Border>
+                </Grid>
+            </DockPanel>
+
+            <!-- ================= Launch + processes ================= -->
+            <ScrollViewer Grid.Column="2" Margin="8,0,0,0" VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding ShowLaunch, Converter={StaticResource BoolVis}}">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="LAUNCH" Style="{StaticResource Heading}"/>
+
+                            <TextBlock Text="Preset" Style="{StaticResource Label}"/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="🗑" Padding="7,1" Margin="4,0,0,0"
+                                        Command="{Binding DeletePresetCommand}" ToolTip="Delete the selected preset"/>
+                                <Button DockPanel.Dock="Right" Content="Save" Padding="8,1" Margin="4,0,0,0"
+                                        Command="{Binding SavePresetCommand}" ToolTip="Save the current game + server as a preset"/>
+                                <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}"
+                                          ToolTip="Load a saved game"/>
+                            </DockPanel>
+
+                            <TextBlock Text="Place ID, game URL, or share link" Style="{StaticResource Label}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="Place ID, game URL, or private-server / share link"/>
+                            <TextBox Text="{Binding PlaceInput, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="Job ID (specific server, optional)" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding JobId, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="PS access code" Style="{StaticResource Label}"
+                                               ToolTip="Private server access code (optional)"/>
+                                    <TextBox Text="{Binding PrivateServerAccessCode, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="PS link code" Style="{StaticResource Label}"
+                                               ToolTip="Private server link code (optional)"/>
+                                    <TextBox Text="{Binding PrivateServerLinkCode, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Style="{StaticResource Label}">
+                                <Run Text="Stagger delay:"/> <Run Text="{Binding StaggerSeconds, StringFormat={}{0:0} s, Mode=OneWay}"/>
+                            </TextBlock>
+                            <Slider Minimum="0" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Value="{Binding StaggerSeconds}"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Content="▶ Launch Selected" Command="{Binding LaunchSelectedCommand}"
+                                        Style="{StaticResource AccentButton}"/>
+                                <Button Content="Cancel" Command="{Binding CancelLaunchCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,8,0,0">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="ACTIVE CLIENTS" Style="{StaticResource Heading}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ActiveProcesses.Count}" HorizontalAlignment="Right" FontSize="11"
+                                           Foreground="{StaticResource Muted}"/>
+                            </DockPanel>
+                            <ItemsControl ItemsSource="{Binding ActiveProcesses}" Margin="0,4,0,0" FontSize="12">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="core:TrackedProcess">
+                                        <DockPanel Margin="0,2">
+                                            <Button DockPanel.Dock="Right" Content="✕" Padding="6,1" Margin="0"
+                                                    ToolTip="Close this client"
+                                                    Command="{Binding DataContext.KillProcessCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                            <TextBlock VerticalAlignment="Center">
+                                                <Run Text="{Binding AccountLabel, Mode=OneWay}" FontWeight="SemiBold"/>
+                                                <Run Text="  PID" Foreground="{StaticResource Muted}"/>
+                                                <Run Text="{Binding Pid, Mode=OneWay}" Foreground="{StaticResource Muted}"/>
+                                            </TextBlock>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <DockPanel Margin="0,8,0,0">
+                                <TextBox DockPanel.Dock="Right" Text="{Binding GridColumns, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="44" ToolTip="Grid columns for Arrange (0 = auto)"/>
+                                <TextBlock Text="Grid columns (0 = auto)" Style="{StaticResource Label}" Margin="0"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Content="▦ Arrange Windows" Command="{Binding ArrangeWindowsCommand}"/>
+                                <Button Content="Close All" Command="{Binding KillAllCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+    </Border>
+</Window>

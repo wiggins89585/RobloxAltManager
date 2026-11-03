@@ -1,0 +1,58 @@
+<Window x:Class="AltManager.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings" Width="460" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
+    <StackPanel Margin="16">
+
+        <TextBlock Text="ACCOUNT HEALTH" Style="{StaticResource Heading}"/>
+        <CheckBox x:Name="AutoStartup" Content="Re-check all accounts on startup" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+            <TextBlock Text="Auto re-check every" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+            <TextBox x:Name="Interval" Width="48" Margin="8,0,6,0"/>
+            <TextBlock Text="minutes (0 = off)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+        </StackPanel>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
+        <TextBlock Text="PRIVACY" Style="{StaticResource Heading}"/>
+        <CheckBox x:Name="Streamer" Content="Streamer mode — mask usernames and IDs" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+        <CheckBox x:Name="ConfirmCopy" Content="Confirm before copying a password" Margin="0,4,0,4" Foreground="{StaticResource Fg}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+            <TextBlock Text="Clear clipboard" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+            <TextBox x:Name="ClipClear" Width="48" Margin="8,0,6,0"/>
+            <TextBlock Text="seconds after copying a password (0 = never)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+        </StackPanel>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
+        <TextBlock Text="VIEW" Style="{StaticResource Heading}"/>
+        <CheckBox x:Name="RememberView" Content="Remember view, group and window size between sessions"
+                  Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+            <TextBlock Text="Card width (grid view)" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+            <TextBox x:Name="CardWidth" Width="56" Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
+        <TextBlock Text="BROWSER" Style="{StaticResource Heading}"/>
+        <TextBlock Text="Custom User-Agent (blank = engine default; recommended)" Style="{StaticResource Label}" TextWrapping="Wrap"/>
+        <TextBox x:Name="UserAgent" TextWrapping="Wrap"/>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
+        <TextBlock Text="VAULT BACKUP" Style="{StaticResource Heading}"/>
+        <TextBlock Text="The backup is the encrypted vault file; it needs the same master password to open." Style="{StaticResource Label}" TextWrapping="Wrap"/>
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+            <Button Content="Export vault…" Click="Export_Click"/>
+            <Button Content="Import vault…" Click="Import_Click"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="Save" Width="90" IsDefault="True" Click="Save_Click" Style="{StaticResource AccentButton}"/>
+            <Button Content="Cancel" Width="90" IsCancel="True" Margin="0"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

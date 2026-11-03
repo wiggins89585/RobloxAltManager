@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AltManager.Core", "src\AltManager.Core\AltManager.Core.csproj", "{23E922BC-C228-431B-B19E-C8E3489FE3ED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AltManager.App", "src\AltManager.App\AltManager.App.csproj", "{13566333-C38F-4048-AB7F-93EC9B9F1DAD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{23E922BC-C228-431B-B19E-C8E3489FE3ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23E922BC-C228-431B-B19E-C8E3489FE3ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23E922BC-C228-431B-B19E-C8E3489FE3ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23E922BC-C228-431B-B19E-C8E3489FE3ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13566333-C38F-4048-AB7F-93EC9B9F1DAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13566333-C38F-4048-AB7F-93EC9B9F1DAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13566333-C38F-4048-AB7F-93EC9B9F1DAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13566333-C38F-4048-AB7F-93EC9B9F1DAD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

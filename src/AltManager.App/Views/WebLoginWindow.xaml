@@ -1,0 +1,19 @@
+<Window x:Class="AltManager.App.Views.WebLoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Roblox Login" Width="520" Height="760" MinWidth="480" MinHeight="640"
+        WindowStartupLocation="CenterOwner" Background="#1E1F22">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#2B2D31" Padding="10,6">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Reload" Padding="10,2" Click="Reload_Click"/>
+                <TextBlock x:Name="StatusText" Foreground="#B5BAC1" VerticalAlignment="Center"
+                           Text="Log in normally. Solve the verification puzzle if it appears — this window closes automatically once you're signed in."
+                           TextWrapping="Wrap" Margin="0,0,10,0"/>
+            </DockPanel>
+        </Border>
+        <!-- Never collapse/hide/zero-size this control: the Arkose iframe will not paint. -->
+        <wv2:WebView2 x:Name="Browser"/>
+    </DockPanel>
+</Window>

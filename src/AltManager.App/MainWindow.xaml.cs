@@ -1,0 +1,77 @@
+﻿using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using AltManager.App.ViewModels;
+
+namespace AltManager.App;
+
+/// <summary>
+/// Pure view: all behaviour lives in MainViewModel. Code here only drives the custom
+/// title bar, rounded corners, and click-a-row-to-select.
+/// </summary>
+public partial class MainWindow : Window
+{
+    private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWCP_ROUND = 2;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        StateChanged += (_, _) =>
+        {
+            // Segoe MDL2: E923 = restore, E922 = maximize
+            MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";
+            MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Restore" : "Maximize";
+        };
+        Closing += (_, _) =>
+        {
+            var b = WindowState == WindowState.Normal ? new Rect(0, 0, ActualWidth, ActualHeight) : RestoreBounds;
+            (DataContext as AltManager.App.ViewModels.MainViewModel)?.SaveViewState(b.Width, b.Height);
+        };
+        SourceInitialized += (_, _) =>
+        {
+            // Windows 11 rounds the borderless window; older Windows ignores this (call just fails).
+            var pref = DWMWCP_ROUND;
+            DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
+        };
+    }
+
+    /// <summary>Clicking anywhere on an account row toggles its checkbox, except on the controls inside it.</summary>
+    private void Row_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not DataGridRow { DataContext: AccountViewModel vm }) return;
+
+        for (var d = e.OriginalSource as DependencyObject; d is not null && d != sender; d = ParentOf(d))
+        {
+            if (d is ComboBox or TextBox or ToggleButton) return;                 // group box, editors, the checkbox itself
+            if (d is DataGridCell { Column: DataGridTextColumn { IsReadOnly: false } }) return; // alias: click to edit
+        }
+
+        vm.IsSelected = !vm.IsSelected;
+        e.Handled = true;
+    }
+
+    private static DependencyObject? ParentOf(DependencyObject d) =>
+        d is Visual ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d);
+
+    /// <summary>Clicking a card (grid view) toggles the account, like a list row. Right-click opens the menu.</summary>
+    private void Card_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AccountViewModel vm })
+            vm.IsSelected = !vm.IsSelected;
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Maximize_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+}
