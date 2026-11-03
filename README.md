@@ -49,6 +49,10 @@ Dependencies only point from App to Core. The view-models never touch windows di
 4. The engine snapshots `RobloxPlayerBeta` PIDs, starts the URI through the shell, and claims the first new PID. A lock around steps 3–4 keeps each PID matched to the right account.
 5. Batch mode spaces launches by a fixed time from one start to the next (5 s by default) and can be cancelled.
 
+## Bulk login
+
+Paste credentials as `user:pass,user:pass,user:pass,`. You can also paste usernames and passwords one at a time; the input automatically adds the `:` between each username and password and the `,` before the next account. Multiline or tab-separated alternating username/password values are formatted automatically. Complete any Roblox verification in each login window. Passwords are not saved.
+
 ## Why embedded FunCaptcha breaks, and the fixes
 
 These are documented in `WebViewEnvironmentFactory.cs` and `WebLoginWindow.xaml.cs`:

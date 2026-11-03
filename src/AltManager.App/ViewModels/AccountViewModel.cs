@@ -107,6 +107,7 @@ public partial class AccountViewModel : ObservableObject
         OnPropertyChanged(nameof(Username));
         OnPropertyChanged(nameof(DisplayName));
         OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(Group));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasPassword));
         OnPropertyChanged(nameof(UserIdText));

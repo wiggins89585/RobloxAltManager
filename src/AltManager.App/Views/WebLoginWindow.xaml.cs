@@ -29,8 +29,7 @@ public partial class WebLoginWindow : Window
     private bool _submitted;
 
     /// <summary>
-    /// Bulk auto-login hit a verification/2-step challenge (e.g. an email code) it can't
-    /// answer, so this account was set aside for the user to finish manually.
+    /// Bulk auto-login hit a verification/2-step challenge (e.g. an email code).
     /// </summary>
     public bool NeedsManual { get; private set; }
     private readonly DispatcherTimer _blankCheck = new() { Interval = TimeSpan.FromSeconds(12) };
@@ -46,7 +45,7 @@ public partial class WebLoginWindow : Window
     /// disagrees with the Sec-CH-UA client hints is a common reason Arkose escalates.
     /// </param>
     /// <param name="autoSubmit">Fill AND click Log In (bulk). False = prefill only, user clicks (manual).</param>
-    /// <param name="abortOnChallenge">Bulk auto only: close with <see cref="NeedsManual"/> if a verification challenge appears.</param>
+    /// <param name="abortOnChallenge">Bulk auto only: detect and prompt for a verification challenge.</param>
     public WebLoginWindow(string? customUserAgent = null, (string User, string Pass)? credentials = null,
                           string? progress = null, bool autoSubmit = true, bool abortOnChallenge = true)
     {
@@ -211,7 +210,7 @@ public partial class WebLoginWindow : Window
         _autofilled = true;
 
         var script = $$"""
-            (function (u, p) {
+            (function (u, p, submit) {
               const set = (el, v) => {
                 Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, v);
                 el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -241,8 +240,7 @@ public partial class WebLoginWindow : Window
 
     /// <summary>
     /// After an auto-submit, watch for a verification / 2-step page (email code, etc.) that the
-    /// autofill can't answer. When seen, set <see cref="NeedsManual"/> and close so the bulk run
-    /// queues this account for manual sign-in at the end.
+    /// autofill can't answer. Keep this window open so the user can complete it here.
     /// </summary>
     private async Task TryDetectChallengeAsync()
     {
@@ -262,8 +260,7 @@ public partial class WebLoginWindow : Window
         if (json.Trim() != "1" || _captured) return;
 
         NeedsManual = true;
-        _poll.Stop();
-        DialogResult = false; // closed without a cookie; bulk reads NeedsManual
+        StatusText.Text = "Complete the verification in this window. The account will be saved when sign-in finishes.";
     }
 
     /// <summary>Deletes only the auth cookie(s) locally. Does NOT hit /logout.</summary>

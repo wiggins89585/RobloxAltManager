@@ -11,7 +11,7 @@ public interface IDialogService
     (IReadOnlyList<string> Cookies, string Group)? ImportCookies(IEnumerable<string> groups);
     string? BrowserLogin(string? customUserAgent);
     (IReadOnlyList<(string User, string Pass)> Credentials, string Group, int DelaySeconds)? BulkLoginInput(IEnumerable<string> groups);
-    /// <summary>Bulk browser login: fills + submits automatically; flags NeedsManual on a verification challenge.</summary>
+    /// <summary>Bulk browser login: fills + submits automatically; keeps the window open for verification challenges.</summary>
     BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress);
     /// <summary>Manual browser login: fields pre-filled but the user clicks Log In and enters any code.</summary>
     string? BrowserLoginManual(string? customUserAgent, string username, string password, string progress);
@@ -26,7 +26,7 @@ public interface IDialogService
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
-/// <param name="NeedsManual">Auto-login hit a verification challenge; queue for manual sign-in.</param>
+/// <param name="NeedsManual">Auto-login detected a verification challenge that needs user input in the open window.</param>
 public readonly record struct BrowserLoginResult(string? Cookie, bool NeedsManual);
 
 public sealed class DialogService : IDialogService

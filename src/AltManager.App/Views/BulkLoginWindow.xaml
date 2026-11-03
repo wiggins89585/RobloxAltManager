@@ -12,7 +12,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" FontSize="12"
-                   Text="Paste accounts as user:pass, separated by commas or new lines — or just paste a username, then its password, then the next username: the : and , are added for you. Each one is logged in through the browser window in turn; solve the verification puzzle if Roblox shows one. Passwords are not saved."/>
+                   Text="Paste accounts as user:pass,user:pass,user:pass, or paste each username and password one at a time. When pasted one at a time, the : and , are added automatically. Each account opens in a browser; complete any verification there. Passwords are not saved."/>
         <TextBox x:Name="InputBox" Grid.Row="1" AcceptsReturn="True" TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11"/>
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">

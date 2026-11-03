@@ -105,7 +105,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     // ---------------- Filtering / groups ----------------
 
-    partial void OnSelectedGroupChanged(string value) => SafeRefresh();
+    public bool CanEditSelectedGroup => IsCustomGroup(SelectedGroup);
+
+    partial void OnSelectedGroupChanged(string value)
+    {
+        OnPropertyChanged(nameof(CanEditSelectedGroup));
+        SafeRefresh();
+    }
     partial void OnSearchTextChanged(string value) => SafeRefresh();
     partial void OnStatusFilterChanged(string value) => SafeRefresh();
 
@@ -207,6 +213,69 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    private async Task EditGroupAsync()
+    {
+        if (!IsCustomGroup(SelectedGroup))
+        {
+            StatusMessage = "Select a custom group to edit.";
+            return;
+        }
+
+        var oldName = SelectedGroup;
+        var newName = _dialogs.Prompt("Edit group", "Group name:", oldName);
+        if (string.IsNullOrWhiteSpace(newName)) return;
+        newName = newName.Trim();
+        if (newName.Equals(AllGroups, StringComparison.OrdinalIgnoreCase) ||
+            Groups.Any(g => !g.Equals(oldName, StringComparison.OrdinalIgnoreCase) &&
+                            g.Equals(newName, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = $"Group '{newName}' already exists or is reserved.";
+            return;
+        }
+
+        var index = _settings.CustomGroups.FindIndex(g => g.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+        if (index < 0) return;
+        _settings.CustomGroups[index] = newName;
+        foreach (var account in Accounts.Where(a => a.Group.Equals(oldName, StringComparison.OrdinalIgnoreCase)))
+        {
+            account.Model.Group = newName;
+            account.Refresh();
+        }
+        _settings.Save();
+        await _vault.SaveAsync();
+        RebuildGroups();
+        SelectedGroup = newName;
+        StatusMessage = $"Group renamed to '{newName}'.";
+    }
+
+    [RelayCommand]
+    private async Task DeleteGroupAsync()
+    {
+        if (!IsCustomGroup(SelectedGroup))
+        {
+            StatusMessage = "Select a custom group to delete.";
+            return;
+        }
+
+        var name = SelectedGroup;
+        if (!_dialogs.Confirm($"Delete the group '{name}'? Accounts in it will move to Ungrouped.")) return;
+        _settings.CustomGroups.RemoveAll(g => g.Equals(name, StringComparison.OrdinalIgnoreCase));
+        foreach (var account in Accounts.Where(a => a.Group.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            account.Model.Group = "Ungrouped";
+            account.Refresh();
+        }
+        _settings.Save();
+        await _vault.SaveAsync();
+        SelectedGroup = AllGroups;
+        RebuildGroups();
+        StatusMessage = $"Group '{name}' deleted.";
+    }
+
+    private bool IsCustomGroup(string? name) =>
+        name is not null && _settings.CustomGroups.Contains(name, StringComparer.OrdinalIgnoreCase);
+
+    [RelayCommand]
     private void SelectAllVisible()
     {
         var visible = AccountsView.Cast<AccountViewModel>().ToList();
@@ -259,7 +328,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var ua = string.IsNullOrWhiteSpace(CustomUserAgent) ? null : CustomUserAgent;
         int ok = 0;
         var failed = new List<string>();
-        var deferred = new List<(string User, string Pass)>(); // email/verification accounts, done by hand at the end
 
         for (var i = 0; i < creds.Count; i++)
         {
@@ -273,45 +341,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
             StatusMessage = $"Bulk import {i + 1}/{creds.Count}: {user}…";
             var result = _dialogs.BulkBrowserLogin(ua, user, pass, $"{i + 1}/{creds.Count}");
 
-            if (result.NeedsManual)
-            {
-                deferred.Add((user, pass));          // email/2-step: skip now, bring it back at the end
-                continue;
-            }
             if (result.Cookie is null)
             {
-                failed.Add($"{user} (window closed)");
+                failed.Add(result.NeedsManual
+                    ? $"{user} (verification not completed)"
+                    : $"{user} (window closed)");
                 if (i < creds.Count - 1 && !_dialogs.Confirm($"Login for '{user}' was closed.\nContinue with the remaining {creds.Count - i - 1} account(s)?"))
                     break;
                 continue;
             }
-            // A cookie came back from the auto flow. If the account has an email attached,
-            // Roblox trusts this device for now but may challenge later — hand it to manual too.
-            if (await _api.HasEmailAttachedAsync(result.Cookie) == true)
-            {
-                deferred.Add((user, pass));
-                continue;
-            }
             var (added, why) = await TryAddCookieAsync(result.Cookie, group, user, pass);
             if (added) ok++; else failed.Add($"{user} ({why})");
-        }
-
-        // Manual pass: email/verification accounts the user finishes by hand.
-        if (deferred.Count > 0)
-        {
-            _dialogs.Error(
-                $"{deferred.Count} account(s) have an email attached or need verification, so they were skipped.\n\n" +
-                string.Join(", ", deferred.Select(d => d.User)) +
-                "\n\nEach one will open now for you to log in manually (enter the password / email code).");
-
-            foreach (var (user, pass) in deferred)
-            {
-                StatusMessage = $"Manual sign-in: {user}…";
-                var cookie = _dialogs.BrowserLoginManual(ua, user, pass, user);
-                if (cookie is null) { failed.Add($"{user} (manual sign-in skipped)"); continue; }
-                var (added, why) = await TryAddCookieAsync(cookie, group, user, pass);
-                if (added) ok++; else failed.Add($"{user} ({why})");
-            }
         }
 
         StatusMessage = $"Bulk import: {ok} added" + (failed.Count > 0 ? $", {failed.Count} failed." : ".");
@@ -476,7 +516,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             else
             {
                 var r = _dialogs.BulkBrowserLogin(ua, t.Model.Username, pass, "");
-                cookie = r.NeedsManual ? _dialogs.BrowserLoginManual(ua, t.Model.Username, pass, "") : r.Cookie;
+                cookie = r.Cookie;
             }
             if (cookie is null) continue; // cancelled this one; move on
 

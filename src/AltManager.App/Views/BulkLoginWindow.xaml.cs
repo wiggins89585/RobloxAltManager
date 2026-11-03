@@ -20,18 +20,26 @@ public partial class BulkLoginWindow : Window
     /// <summary>
     /// Smart paste: pasting a single value at the end alternates username → password.
     /// A username gets ':' appended; pasting after a password inserts ',' first.
-    /// Pastes that already contain ':' / ',' / newlines, or that aren't at the end, paste normally.
+    /// Multiline username/password pairs are converted to the same user:pass format.
     /// </summary>
     private void OnPaste(object sender, DataObjectPastingEventArgs e)
     {
         if (e.SourceDataObject.GetData(DataFormats.UnicodeText) is not string raw) return;
         var value = raw.Trim();
-        if (value.Length == 0 || value.IndexOfAny([':', ',', '\n', '\r']) >= 0) return;
-
+        if (value.Length == 0) return;
         var text = InputBox.Text;
         if (InputBox.CaretIndex != text.Length || InputBox.SelectionLength > 0) return;
 
         var before = text.TrimEnd();
+        if (TryFormatAlternatingPairs(value, out var formatted))
+        {
+            e.CancelCommand();
+            InputBox.Text = before + (before.Length > 0 && !before.EndsWith(',') ? "," : "") + formatted;
+            InputBox.CaretIndex = InputBox.Text.Length;
+            return;
+        }
+
+        if (value.IndexOfAny([':', ',', '\n', '\r']) >= 0) return;
         string insert;
         if (before.Length == 0 || before.EndsWith(',')) insert = value + ":";   // new username
         else if (before.EndsWith(':')) insert = value;                           // password
@@ -40,6 +48,22 @@ public partial class BulkLoginWindow : Window
         e.CancelCommand();
         InputBox.Text = before + insert;
         InputBox.CaretIndex = InputBox.Text.Length;
+    }
+
+    private static bool TryFormatAlternatingPairs(string text, out string formatted)
+    {
+        var values = text.Split(['\r', '\n', '\t'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (values.Length < 2 || values.Length % 2 != 0 ||
+            values.Any(value => value.IndexOfAny([':', ',']) >= 0))
+        {
+            formatted = "";
+            return false;
+        }
+
+        formatted = string.Join(",", Enumerable.Range(0, values.Length / 2)
+            .Select(i => $"{values[i * 2]}:{values[i * 2 + 1]}"));
+        return true;
     }
 
     /// <summary>"user:pass,user:pass" or one per line. Splits each entry on the first ':' only.</summary>
