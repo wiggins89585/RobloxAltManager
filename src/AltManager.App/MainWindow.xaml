@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:AltManager.App.ViewModels"
         xmlns:core="clr-namespace:AltManager.Core.Launch;assembly=AltManager.Core"
         Title="Roblox Alt Manager" Width="920" Height="500" MinWidth="820" MinHeight="420"
+        Icon="pack://application:,,,/Assets/RobloxAltManager.ico"
         Background="{StaticResource Bg}" Foreground="{StaticResource Fg}"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -103,6 +104,8 @@
                     </Ellipse>
                 </StackPanel>
 
+                <Image Source="/Assets/RobloxAltManager.png" Width="24" Height="24" Margin="8,0,0,0"
+                       Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="12,0,14,0"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
                             WindowChrome.IsHitTestVisibleInChrome="True">

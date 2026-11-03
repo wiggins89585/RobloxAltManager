@@ -8,9 +8,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\RobloxAltManager.ico</ApplicationIcon>
     <RootNamespace>AltManager.App</RootNamespace>
     <AssemblyName>AltManager</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\RobloxAltManager.png;Assets\RobloxAltManager.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
