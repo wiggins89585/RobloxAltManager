@@ -1,4 +1,8 @@
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using AltManager.App.Services;
@@ -20,6 +24,7 @@ namespace AltManager.App;
 public partial class App : Application
 {
     private MainViewModel? _vm;
+    private readonly CancellationTokenSource _shutdown = new();
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -62,6 +67,96 @@ public partial class App : Application
 
         await _vm.LoadAvatarsAsync(vault.Accounts.Select(a => a.UserId));
         await _vm.RunStartupTasksAsync();
+        _ = CheckForUpdatesAsync(settings, e.Args.Contains("--password-vault"), window);
+    }
+
+    private async Task CheckForUpdatesAsync(AppSettings settings, bool usePasswordVault, Window owner)
+    {
+#if DEBUG
+        return;
+#else
+        if (!settings.AutoUpdateEnabled)
+            return;
+
+        PreparedUpdate? update;
+        try
+        {
+            var currentVersion = typeof(App).Assembly.GetName().Version ?? new Version(1, 0);
+            update = await new GitHubUpdateService().DownloadLatestAsync(currentVersion, _shutdown.Token);
+        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (HttpRequestException ex)
+        {
+            Trace.WriteLine($"Update check failed: {ex.Message}");
+            return;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Trace.WriteLine($"Update check timed out: {ex.Message}");
+            return;
+        }
+        catch (JsonException ex)
+        {
+            Trace.WriteLine($"Could not read GitHub release metadata: {ex.Message}");
+            return;
+        }
+        catch (InvalidDataException ex)
+        {
+            MessageBox.Show(owner, ex.Message, "Update unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        catch (IOException ex)
+        {
+            MessageBox.Show(owner, $"Could not download or unpack the update: {ex.Message}",
+                "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            MessageBox.Show(owner, $"Could not save the update: {ex.Message}",
+                "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        catch (InvalidOperationException ex)
+        {
+            MessageBox.Show(owner, ex.Message, "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (update is null || _shutdown.IsCancellationRequested)
+            return;
+
+        try
+        {
+            new GitHubUpdateService().StartApply(update, usePasswordVault);
+            MessageBox.Show(owner,
+                $"Update {update.Version.ToString(3)} is ready. The app will restart to install it.",
+                "Roblox Alt Manager update", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            MessageBox.Show(owner, $"Could not start the update helper: {ex.Message}",
+                "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (IOException ex)
+        {
+            MessageBox.Show(owner, $"Could not prepare the update helper: {ex.Message}",
+                "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            MessageBox.Show(owner, $"Could not prepare the update helper: {ex.Message}",
+                "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (InvalidOperationException ex)
+        {
+            MessageBox.Show(owner, ex.Message, "Update failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+#endif
     }
 
     private static async Task<AccountVault> OpenVaultAsync(bool wantPassword)
@@ -115,6 +210,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _shutdown.Cancel();
         _vm?.Dispose(); // releases the singleton mutex last-ish; running clients keep running
         base.OnExit(e);
     }

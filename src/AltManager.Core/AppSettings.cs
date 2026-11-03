@@ -19,6 +19,9 @@ public sealed class LaunchPreset
 /// </summary>
 public sealed class AppSettings
 {
+    // Updates
+    public bool AutoUpdateEnabled { get; set; } = true;
+
     // Account health
     public bool AutoValidateOnStartup { get; set; }
     public int AutoValidateIntervalMinutes { get; set; }   // 0 = off

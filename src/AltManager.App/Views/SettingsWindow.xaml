@@ -16,6 +16,12 @@
 
         <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
 
+        <TextBlock Text="UPDATES" Style="{StaticResource Heading}"/>
+        <CheckBox x:Name="AutoUpdate" Content="Automatically download and install updates"
+                  Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
         <TextBlock Text="PRIVACY" Style="{StaticResource Heading}"/>
         <CheckBox x:Name="Streamer" Content="Streamer mode — mask usernames and IDs" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
         <CheckBox x:Name="ConfirmCopy" Content="Confirm before copying a password" Margin="0,4,0,4" Foreground="{StaticResource Fg}"/>

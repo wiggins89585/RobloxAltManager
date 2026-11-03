@@ -14,6 +14,7 @@ public partial class SettingsWindow : Window
     {
         _s = settings;
         InitializeComponent();
+        AutoUpdate.IsChecked = _s.AutoUpdateEnabled;
         AutoStartup.IsChecked = _s.AutoValidateOnStartup;
         Interval.Text = _s.AutoValidateIntervalMinutes.ToString();
         Streamer.IsChecked = _s.StreamerMode;
@@ -26,6 +27,7 @@ public partial class SettingsWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
+        _s.AutoUpdateEnabled = AutoUpdate.IsChecked == true;
         _s.AutoValidateOnStartup = AutoStartup.IsChecked == true;
         _s.AutoValidateIntervalMinutes = ParseClamp(Interval.Text, 0, 0, 1440);
         _s.StreamerMode = Streamer.IsChecked == true;
