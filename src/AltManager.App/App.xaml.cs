@@ -202,23 +202,30 @@ public partial class App : Application
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
-            var pw = PromptPassword(isNew ? "Create a master password for the vault:" : "Vault master password:");
+            using var pw = PromptPassword(isNew ? "Create a master password for the vault:" : "Vault master password:");
             if (pw is null) throw new OperationCanceledException("Vault unlock cancelled.");
+            var cipher = AesGcmCipher.FromPassword(pw, salt);
             try
             {
-                // Cipher lives for the app lifetime (it is the vault's key holder).
-                return await AccountVault.OpenAsync(path, AesGcmCipher.FromPassword(pw, salt), salt);
+                // AccountVault owns the cipher after a successful open.
+                return await AccountVault.OpenAsync(path, cipher, salt);
             }
             catch (CryptographicException) when (!isNew)
             {
+                cipher.Dispose();
                 MessageBox.Show("Wrong password.", "Vault", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch
+            {
+                cipher.Dispose();
+                throw;
             }
         }
         throw new CryptographicException("Too many failed attempts.");
     }
 
     /// <summary>Minimal code-only password dialog (keeps the sample to fewer XAML files).</summary>
-    private static string? PromptPassword(string prompt)
+    private static System.Security.SecureString? PromptPassword(string prompt)
     {
         var box = new PasswordBox { Margin = new Thickness(0, 8, 0, 8), MinWidth = 280 };
         var ok = new Button { Content = "Unlock", IsDefault = true, Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
@@ -234,7 +241,18 @@ public partial class App : Application
         };
         ok.Click += (_, _) => w.DialogResult = true;
         w.Loaded += (_, _) => box.Focus();
-        return w.ShowDialog() == true && box.Password.Length > 0 ? box.Password : null;
+        if (w.ShowDialog() != true)
+        {
+            box.Clear();
+            return null;
+        }
+
+        var password = box.SecurePassword;
+        box.Clear();
+        if (password.Length > 0)
+            return password;
+        password.Dispose();
+        return null;
     }
 
     protected override void OnExit(ExitEventArgs e)

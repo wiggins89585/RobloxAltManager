@@ -11,7 +11,7 @@ namespace AltManager.Core.Vault;
 /// the account's Guid as cipher context. Writes are atomic (temp file + replace)
 /// so a crash mid-save never corrupts the vault.
 /// </summary>
-public sealed class AccountVault
+public sealed class AccountVault : IDisposable
 {
     private const string CheckPlaintext = "altmanager-vault-check";
     private static readonly JsonSerializerOptions Json = new()
@@ -126,7 +126,14 @@ public sealed class AccountVault
             if (File.Exists(_path)) File.Replace(tmp, _path, _path + ".bak", ignoreMetadataErrors: true);
             else File.Move(tmp, _path);
         }
+
         finally { _io.Release(); }
+    }
+
+    public void Dispose()
+    {
+        if (_cipher is IDisposable disposable)
+            disposable.Dispose();
     }
 
     private static byte[] Context(Account a) => a.Id.ToByteArray();

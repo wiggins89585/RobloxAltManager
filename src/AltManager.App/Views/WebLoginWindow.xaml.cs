@@ -22,7 +22,7 @@ public partial class WebLoginWindow : Window
     private readonly string? _customUserAgent;
     private bool _captured;
     private bool _checking;
-    private readonly (string User, string Pass)? _credentials;
+    private (string User, string Pass)? _credentials;
     private readonly bool _autoSubmit;
     private readonly bool _abortOnChallenge;
     private bool _autofilled;
@@ -63,7 +63,13 @@ public partial class WebLoginWindow : Window
                 : $"Manual sign-in for {c.User}. The password is filled in — press Log In and enter the email/verification code.";
         }
         Loaded += async (_, _) => await InitAsync();
-        Closed += (_, _) => { _poll.Stop(); _blankCheck.Stop(); _retryTimer.Stop(); };
+        Closed += (_, _) =>
+        {
+            _poll.Stop();
+            _blankCheck.Stop();
+            _retryTimer.Stop();
+            _credentials = null;
+        };
         _poll.Tick += async (_, _) => { await TryCaptureAsync(); await TryDetectChallengeAsync(); };
     }
 
@@ -93,8 +99,21 @@ public partial class WebLoginWindow : Window
         // Tracking prevention partitions/block third-party storage → Arkose iframe re-challenges.
         core.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.None;
 
-        // Arkose sometimes opens audio-challenge / help links in popups; keep them in-frame.
-        core.NewWindowRequested += (_, e) => { e.Handled = true; core.Navigate(e.Uri); };
+        core.NavigationStarting += (_, e) =>
+        {
+            if (!IsTrustedRobloxUri(e.Uri))
+            {
+                e.Cancel = true;
+                StatusText.Text = "Blocked navigation outside Roblox.";
+            }
+        };
+        // Keep Roblox verification popups in-frame, but never send credentials to other sites.
+        core.NewWindowRequested += (_, e) =>
+        {
+            e.Handled = true;
+            if (IsTrustedRobloxUri(e.Uri))
+                core.Navigate(e.Uri);
+        };
         core.NavigationCompleted += async (_, e) =>
         {
             // 429 = Roblox is throttling logins from this IP; a failed load also leaves a blank page.
@@ -185,7 +204,10 @@ public partial class WebLoginWindow : Window
     private async Task TryAutofillAsync()
     {
         if (_credentials is not { } c || _autofilled || _captured || Browser.CoreWebView2 is null) return;
-        if (!Browser.CoreWebView2.Source.Contains("/login", StringComparison.OrdinalIgnoreCase)) return;
+        if (!Uri.TryCreate(Browser.CoreWebView2.Source, UriKind.Absolute, out var source) ||
+            !IsTrustedRobloxUri(source) ||
+            !source.AbsolutePath.Equals("/login", StringComparison.OrdinalIgnoreCase))
+            return;
         _autofilled = true;
 
         var script = $$"""
@@ -206,8 +228,16 @@ public partial class WebLoginWindow : Window
             })({{JsonSerializer.Serialize(c.User)}}, {{JsonSerializer.Serialize(c.Pass)}}, {{(_autoSubmit ? "true" : "false")}});
             """;
         await Browser.CoreWebView2.ExecuteScriptAsync(script);
+        _credentials = null;
         if (_autoSubmit) _submitted = true;
     }
+
+    private static bool IsTrustedRobloxUri(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && IsTrustedRobloxUri(uri);
+
+    private static bool IsTrustedRobloxUri(Uri uri) =>
+        uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort && string.IsNullOrEmpty(uri.UserInfo) &&
+        uri.Host is "www.roblox.com" or "roblox.com" or "auth.roblox.com";
 
     /// <summary>
     /// After an auto-submit, watch for a verification / 2-step page (email code, etc.) that the

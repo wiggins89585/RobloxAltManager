@@ -59,6 +59,7 @@ public partial class BulkLoginWindow : Window
             MessageBox.Show(this, "No user:pass entries found.", "Bulk import");
             return;
         }
+        InputBox.Clear();
         DialogResult = true;
     }
 }

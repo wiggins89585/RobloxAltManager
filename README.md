@@ -66,8 +66,10 @@ These are documented in `WebViewEnvironmentFactory.cs` and `WebLoginWindow.xaml.
 
 * **DPAPI** (the default): the key is tied to your Windows account. It stops someone who copies the file to another PC, but not malware running as you.
 * **AES-GCM**: PBKDF2-SHA256 with 600k iterations. The vault file can be moved between machines, and stays locked while the app is closed.
+* The AES vault password is entered through WPF's secure password control; temporary derivation buffers are cleared, and the derived key is cleared when the app exits. Passwords and cookies must still be decrypted briefly in memory when used, so this does not protect against malware running as your Windows user while the app is open.
 * Every cookie blob is bound to its record, so swapping ciphertexts between accounts fails authentication.
 * Roblox rotates cookies through `Set-Cookie`. `RobloxApiClient.CookieRotated` writes the new value back to the vault so stored cookies don't quietly go stale.
+* The embedded account browser removes its Roblox session cookie when the window closes and blocks top-level navigation outside Roblox. The Roblox login window only autofills on trusted Roblox login pages.
 * The `HttpClient` has `UseCookies = false`, so no cookie jar is shared between accounts.
 
 ## Caveats

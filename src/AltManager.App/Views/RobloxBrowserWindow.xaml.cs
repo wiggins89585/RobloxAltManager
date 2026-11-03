@@ -7,8 +7,8 @@ namespace AltManager.App.Views;
 
 /// <summary>
 /// Opens roblox.com signed in as one account, by injecting its .ROBLOSECURITY cookie into a
-/// per-account persistent WebView2 profile. Each account browses in isolation, so sessions
-/// don't collide. The cookie is written fresh on open so a rotated cookie stays current.
+/// per-account WebView2 profile. Each account browses in isolation, and the auth cookie is
+/// removed from the profile when the window closes.
 /// </summary>
 public partial class RobloxBrowserWindow : Window
 {
@@ -100,7 +100,7 @@ public partial class RobloxBrowserWindow : Window
             }
         })();
         """;
-    private readonly string _cookie;
+    private string? _cookie;
     private readonly string _profileKey;
 
     public RobloxBrowserWindow(string cookie, string profileKey, string label, long userId)
@@ -116,6 +116,7 @@ public partial class RobloxBrowserWindow : Window
             MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Restore" : "Maximize";
         };
         Loaded += async (_, _) => await InitAsync();
+        Closed += (_, _) => ClearSessionCookie();
     }
 
     private async Task InitAsync()
@@ -136,16 +137,35 @@ public partial class RobloxBrowserWindow : Window
         core.Settings.AreDevToolsEnabled = false;
         core.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.None;
         await core.AddScriptToExecuteOnDocumentCreatedAsync(RobloxDarkThemeScript);
+        core.NavigationStarting += (_, e) =>
+        {
+            if (!IsTrustedRobloxUri(e.Uri))
+                e.Cancel = true;
+        };
 
         // Inject the auth cookie for roblox.com before navigating, so the first load is already logged in.
         var cm = core.CookieManager;
-        var c = cm.CreateCookie(RobloxCookie.Name, _cookie, ".roblox.com", "/");
+        cm.DeleteCookiesWithDomainAndPath(RobloxCookie.Name, ".roblox.com", "/");
+        var c = cm.CreateCookie(RobloxCookie.Name, _cookie!, ".roblox.com", "/");
         c.IsSecure = true;
         c.IsHttpOnly = true;
         cm.AddOrUpdateCookie(c);
+        _cookie = null;
 
         core.Navigate(Home);
     }
+
+    private void ClearSessionCookie()
+    {
+        var core = Browser.CoreWebView2;
+        if (core is null) return;
+        core.CookieManager.DeleteCookiesWithDomainAndPath(RobloxCookie.Name, ".roblox.com", "/");
+    }
+
+    private static bool IsTrustedRobloxUri(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort && string.IsNullOrEmpty(uri.UserInfo) &&
+        uri.Host is "www.roblox.com" or "roblox.com" or "auth.roblox.com";
 
     private void Back_Click(object sender, RoutedEventArgs e) { if (Browser.CoreWebView2?.CanGoBack == true) Browser.CoreWebView2.GoBack(); }
     private void Forward_Click(object sender, RoutedEventArgs e) { if (Browser.CoreWebView2?.CanGoForward == true) Browser.CoreWebView2.GoForward(); }

@@ -881,6 +881,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _launchCts?.Cancel();
         _tracker.Dispose();
         _api.Dispose();
+        _vault.Dispose();
         _guard.Dispose();
     }
 }

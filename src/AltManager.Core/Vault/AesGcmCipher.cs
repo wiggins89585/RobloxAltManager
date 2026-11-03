@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Security;
 
 namespace AltManager.Core.Vault;
 
@@ -21,10 +23,31 @@ public sealed class AesGcmCipher : IVaultCipher, IDisposable
 
     private AesGcmCipher(byte[] key) => _key = key;
 
-    public static AesGcmCipher FromPassword(string password, byte[] salt)
+    public static AesGcmCipher FromPassword(SecureString password, byte[] salt)
     {
-        var key = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, 32);
-        return new AesGcmCipher(key);
+        ArgumentNullException.ThrowIfNull(password);
+        ArgumentNullException.ThrowIfNull(salt);
+
+        var passwordChars = new char[password.Length];
+        var passwordPointer = Marshal.SecureStringToGlobalAllocUnicode(password);
+        byte[]? key = null;
+        try
+        {
+            Marshal.Copy(passwordPointer, passwordChars, 0, passwordChars.Length);
+            key = Rfc2898DeriveBytes.Pbkdf2(passwordChars.AsSpan(), salt, Iterations, HashAlgorithmName.SHA256, 32);
+            return new AesGcmCipher(key);
+        }
+        catch
+        {
+            if (key is not null)
+                CryptographicOperations.ZeroMemory(key);
+            throw;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(passwordChars.AsSpan()));
+            Marshal.ZeroFreeGlobalAllocUnicode(passwordPointer);
+        }
     }
 
     public static byte[] NewSalt() => RandomNumberGenerator.GetBytes(SaltSize);
@@ -53,8 +76,16 @@ public sealed class AesGcmCipher : IVaultCipher, IDisposable
         var pt = new byte[ct.Length];
 
         using var aes = new AesGcm(_key, TagSize);
-        aes.Decrypt(nonce, ct, tag, pt, context); // throws AuthenticationTagMismatchException on tamper/wrong key
-        return pt;
+        try
+        {
+            aes.Decrypt(nonce, ct, tag, pt, context); // throws AuthenticationTagMismatchException on tamper/wrong key
+            return pt;
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(pt);
+            throw;
+        }
     }
 
     public void Dispose() => CryptographicOperations.ZeroMemory(_key);
