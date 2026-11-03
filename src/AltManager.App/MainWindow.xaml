@@ -91,23 +91,10 @@
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Content="&#xE7B3;" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource CaptionButton}"
-                            ToolTip="Streamer mode — mask usernames and IDs"/>
-                    <Button Content="&#xE713;" Command="{Binding OpenSettingsCommand}" Style="{StaticResource CaptionButton}"
-                            ToolTip="Settings"/>
-                    <Ellipse Width="8" Height="8" Margin="8,0,0,0" VerticalAlignment="Center"
-                             ToolTip="Multi-instance mode (green = active)">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="#F23F43"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding MultiInstanceActive}" Value="True">
-                                        <Setter Property="Fill" Value="#23A55A"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
+                    <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Mask or show usernames and IDs"/>
+                    <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Open settings"/>
                 </StackPanel>
 
                 <Image Source="/Assets/RobloxAltManager.png" Width="32" Height="32" Margin="6,0,0,0"
@@ -119,7 +106,7 @@
                             ToolTip="Import .ROBLOSECURITY cookies"/>
                     <Button Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
                             ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                    <Button Content="👥 Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
+                    <Button Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
                             ToolTip="Log in several accounts from a user:pass,user:pass list"/>
                     <Button Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
                             ToolTip="Re-check every account's cookie"/>
