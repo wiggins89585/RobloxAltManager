@@ -22,7 +22,7 @@ public interface IDialogService
     /// <summary>Opens the settings window; returns true if the user saved.</summary>
     bool EditSettings(AppSettings settings);
     /// <summary>Opens roblox.com in a browser window signed in as this account (non-modal).</summary>
-    void OpenRobloxBrowser(string cookie, string profileKey, string label);
+    void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId);
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
@@ -98,8 +98,8 @@ public sealed class DialogService : IDialogService
         return w.ShowDialog() == true;
     }
 
-    public void OpenRobloxBrowser(string cookie, string profileKey, string label) =>
-        new RobloxBrowserWindow(cookie, profileKey, label).Show(); // non-modal: keep using the app
+    public void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId) =>
+        new RobloxBrowserWindow(cookie, profileKey, label, userId).Show(); // non-modal: keep using the app
 
     private static System.Windows.Media.Brush Brush(string hex) =>
         (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;

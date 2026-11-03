@@ -17,6 +17,12 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="0,0,3,0"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
         <!-- Shared by list rows and grid cards. The host's Tag holds the MainViewModel (menus live outside the
              visual tree, so they can't find the window); the menu's DataContext is the account itself. -->
         <ContextMenu x:Key="AccountMenu" x:Shared="False">
@@ -47,8 +53,8 @@
                       Command="{Binding PlacementTarget.Tag.CopyProfileLinkCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <TextBlock Text="GAME" Style="{StaticResource MenuHeader}"/>
-            <MenuItem Header="Join the Launch panel's game" CommandParameter="{Binding}"
-                      ToolTip="Gives this account (or every checked account) its own game: the one typed in the Launch panel"
+            <MenuItem Header="Use launch game ID" CommandParameter="{Binding}"
+                      ToolTip="Sets this account (or every checked account) to the game ID in the Launch panel"
                       Command="{Binding PlacementTarget.Tag.UseLaunchGameForAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="Clear own game" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.ClearAccountGameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -109,15 +115,15 @@
                 <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Content="＋ Cookie" Command="{Binding ImportCookiesCommand}"
+                    <Button Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
                             ToolTip="Import .ROBLOSECURITY cookies"/>
-                    <Button Content="🌐 Login" Command="{Binding BrowserLoginCommand}"
+                    <Button Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
                             ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                    <Button Content="👥 Bulk" Command="{Binding BulkLoginCommand}"
+                    <Button Content="👥 Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
                             ToolTip="Log in several accounts from a user:pass,user:pass list"/>
-                    <Button Content="✔ Validate" Command="{Binding ValidateAllCommand}"
+                    <Button Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
                             ToolTip="Re-check every account's cookie"/>
-                    <Button Content="🗑 Remove" Command="{Binding RemoveSelectedCommand}"
+                    <Button Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
                             ToolTip="Remove the selected accounts"/>
                 </StackPanel>
             </DockPanel>
@@ -144,7 +150,11 @@
             <Border Grid.Column="0" Style="{StaticResource Card}" Padding="4,8,4,4" Margin="0,0,8,0"
                     Visibility="{Binding ShowGroups, Converter={StaticResource BoolVis}}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="GROUPS" Style="{StaticResource Label}" Margin="6,0,0,4"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="6,0,2,4">
+                        <Button DockPanel.Dock="Right" Content="+" Padding="5,0" Margin="0"
+                                Command="{Binding AddGroupCommand}" ToolTip="Add a custom group"/>
+                        <TextBlock Text="GROUPS" Style="{StaticResource Label}" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" FontSize="12"
                              Background="Transparent" Foreground="{StaticResource Fg}" BorderThickness="0"/>
                 </DockPanel>
@@ -186,7 +196,7 @@
                               ToolTip="Show only accounts with this status"/>
 
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             ToolTip="Filter by username, alias or user ID"/>
+                             ToolTip="Filter by username, note, game ID, or user ID"/>
                 </DockPanel>
 
                 <Grid>
@@ -317,11 +327,12 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="ALIAS" Width="1*"
-                                            Binding="{Binding Alias, UpdateSourceTrigger=LostFocus}">
+                        <DataGridTextColumn Header="NOTE" Width="1*"
+                                            Binding="{Binding Notes, UpdateSourceTrigger=LostFocus}">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="ToolTip" Value="{Binding Notes}"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
@@ -348,23 +359,13 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="GAME" Width="1.2*"
-                                            Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus}">
+                        <DataGridTextColumn Header="GAME ID" Width="1.2*"
+                                            Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                                     <Setter Property="Foreground" Value="{StaticResource Muted}"/>
-                                    <Setter Property="ToolTip" Value="Per-account game (blank = Launch panel's game). Place ID or game/server link."/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-
-                        <DataGridTextColumn Header="LAUNCH" Width="1*" IsReadOnly="True"
-                                            Binding="{Binding LaunchState}" Foreground="{StaticResource Muted}">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                    <Setter Property="ToolTip" Value="{Binding LaunchState}"/>
+                                    <Setter Property="ToolTip" Value="Per-account Roblox game ID (blank = use Launch panel). Enter a numeric Place ID."/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
@@ -392,7 +393,7 @@
                                           ToolTip="Load a saved game"/>
                             </DockPanel>
 
-                            <TextBlock Text="Place ID, game URL, or share link" Style="{StaticResource Label}"
+                            <TextBlock Text="Game ID, game URL, or share link" Style="{StaticResource Label}"
                                        TextTrimming="CharacterEllipsis"
                                        ToolTip="Place ID, game URL, or private-server / share link"/>
                             <TextBox Text="{Binding PlaceInput, UpdateSourceTrigger=PropertyChanged}"/>

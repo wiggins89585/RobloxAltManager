@@ -131,7 +131,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var q = SearchText.Trim();
         // Search the real username even in streamer mode, so filtering still works.
         return vm.Model.Username.Contains(q, StringComparison.OrdinalIgnoreCase)
-            || vm.Alias.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || vm.Notes.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || vm.GameOverride.Contains(q, StringComparison.OrdinalIgnoreCase)
             || vm.UserId.ToString().Contains(q);
     }
 
@@ -177,12 +178,32 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var current = SelectedGroup;
         var wanted = new[] { AllGroups }
             .Concat(new[] { "Main", "Trading", "Farming Alts" })        // sensible defaults
+            .Concat(_settings.CustomGroups)
             .Concat(Accounts.Select(a => a.Group))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         Groups.Clear();
         foreach (var g in wanted) Groups.Add(g);
         SelectedGroup = Groups.Contains(current) ? current : AllGroups;
+    }
+
+    [RelayCommand]
+    private void AddGroup()
+    {
+        var name = _dialogs.Prompt("Add group", "Group name:");
+        if (string.IsNullOrWhiteSpace(name)) return;
+        name = name.Trim();
+        if (name.Equals(AllGroups, StringComparison.OrdinalIgnoreCase) ||
+            Groups.Contains(name, StringComparer.OrdinalIgnoreCase))
+        {
+            StatusMessage = $"Group '{name}' already exists or is reserved.";
+            return;
+        }
+
+        _settings.CustomGroups.Add(name);
+        _settings.Save();
+        RebuildGroups();
+        SelectedGroup = name;
     }
 
     [RelayCommand]
@@ -474,7 +495,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             !_dialogs.Confirm($"Open {targets.Count} browser windows, one per account?")) return;
         foreach (var t in targets)
         {
-            try { _dialogs.OpenRobloxBrowser(_vault.GetCookie(t.Model), t.Model.Id.ToString(), t.Label); }
+            try { _dialogs.OpenRobloxBrowser(_vault.GetCookie(t.Model), t.Model.Id.ToString(), t.Label, t.UserId); }
             catch (Exception ex) { _dialogs.Error($"Could not open browser for {t.Label}: " + ex.Message); }
         }
     }
@@ -512,7 +533,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (vm is null) return;
         if (string.IsNullOrWhiteSpace(PlaceInput)) { StatusMessage = "Type a game in the Launch panel first."; return; }
-        foreach (var a in TargetsFor(vm)) a.GameOverride = PlaceInput;
+        var placeId = LaunchTargetParser.Parse(PlaceInput).PlaceId;
+        if (placeId is null or <= 0) { StatusMessage = "The Launch panel input has no game ID."; return; }
+        foreach (var a in TargetsFor(vm)) a.GameOverride = placeId.Value.ToString();
         StatusMessage = $"Game set for {TargetsFor(vm).Count} account(s).";
     }
 

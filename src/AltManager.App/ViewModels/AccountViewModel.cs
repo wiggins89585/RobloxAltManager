@@ -1,4 +1,5 @@
 using AltManager.Core.Models;
+using AltManager.Core.Launch;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AltManager.App.ViewModels;
@@ -72,10 +73,12 @@ public partial class AccountViewModel : ObservableObject
 
     public string GameOverride
     {
-        get => Model.GameOverride;
+        get => LaunchTargetParser.Parse(Model.GameOverride).PlaceId?.ToString() ?? Model.GameOverride;
         set
         {
             var v = value?.Trim() ?? "";
+            if (v.Length > 0 && (!long.TryParse(v, out var gameId) || gameId <= 0))
+                throw new ArgumentException("Enter a positive numeric Roblox game ID.");
             if (Model.GameOverride != v) { Model.GameOverride = v; OnPropertyChanged(); OnPropertyChanged(nameof(GameLabel)); Changed?.Invoke(this); }
         }
     }

@@ -16,13 +16,13 @@ public partial class RobloxBrowserWindow : Window
     private readonly string _cookie;
     private readonly string _profileKey;
 
-    public RobloxBrowserWindow(string cookie, string profileKey, string label)
+    public RobloxBrowserWindow(string cookie, string profileKey, string label, long userId)
     {
         _cookie = cookie;
         _profileKey = profileKey;
         InitializeComponent();
-        Title = $"Roblox — {label}";
-        StatusText.Text = $"Signed in as {label}";
+        Title = $"Roblox — {label} (ID: {userId})";
+        StatusText.Text = $"Signed in as {label} · ID {userId}";
         StateChanged += (_, _) =>
         {
             MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";

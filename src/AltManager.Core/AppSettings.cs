@@ -41,6 +41,7 @@ public sealed class AppSettings
     public string LastGroup { get; set; } = "";
     public double WindowWidth { get; set; }
     public double WindowHeight { get; set; }
+    public List<string> CustomGroups { get; set; } = new();
 
     // Browser
     public string CustomUserAgent { get; set; } = "";

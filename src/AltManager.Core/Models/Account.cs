@@ -33,7 +33,7 @@ public sealed class Account
     public string EncryptedCookie { get; set; } = "";
     /// <summary>Encrypted like the cookie; empty when the password was never seen (cookie imports).</summary>
     public string EncryptedPassword { get; set; } = "";
-    /// <summary>Per-account game (place ID / game or server link). Empty = use the Launch panel's game.</summary>
+    /// <summary>Per-account game ID. Empty = use the Launch panel's game; older saved game links remain readable.</summary>
     public string GameOverride { get; set; } = "";
     public string Notes { get; set; } = "";
     public bool Favorite { get; set; }
