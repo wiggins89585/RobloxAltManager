@@ -104,9 +104,9 @@
                     </Ellipse>
                 </StackPanel>
 
-                <Image Source="/Assets/RobloxAltManager.png" Width="24" Height="24" Margin="8,0,0,0"
+                <Image Source="/Assets/RobloxAltManager.png" Width="32" Height="32" Margin="6,0,0,0"
                        Stretch="Uniform" VerticalAlignment="Center"/>
-                <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="12,0,14,0"/>
+                <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
                             WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Content="＋ Cookie" Command="{Binding ImportCookiesCommand}"
