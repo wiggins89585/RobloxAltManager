@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using AltManager.App.Services;
 using AltManager.Core.Roblox;
 using Microsoft.Web.WebView2.Core;
@@ -141,6 +142,7 @@ public partial class RobloxBrowserWindow : Window
             if (!IsTrustedRobloxUri(e.Uri))
                 e.Cancel = true;
         };
+        core.SourceChanged += (_, _) => SyncAddress();
 
         // Inject the auth cookie for roblox.com before navigating, so the first load is already logged in.
         var cm = core.CookieManager;
@@ -152,6 +154,35 @@ public partial class RobloxBrowserWindow : Window
         _cookie = null;
 
         core.Navigate(Home);
+        SyncAddress();
+    }
+
+    private void SyncAddress()
+    {
+        var source = Browser.CoreWebView2?.Source;
+        if (source is not null)
+            UrlBox.Text = source;
+    }
+
+    private void UrlBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+
+        e.Handled = true;
+        var address = UrlBox.Text.Trim();
+        if (!address.Contains("://", StringComparison.Ordinal))
+            address = $"https://{address}";
+
+        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || !IsTrustedRobloxUri(uri))
+        {
+            MessageBox.Show(this, "Enter an HTTPS URL on roblox.com.", "Unsupported address",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            SyncAddress();
+            return;
+        }
+
+        Browser.CoreWebView2?.Navigate(uri.AbsoluteUri);
     }
 
     private void ClearSessionCookie()
@@ -162,7 +193,9 @@ public partial class RobloxBrowserWindow : Window
     }
 
     private static bool IsTrustedRobloxUri(string value) =>
-        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && IsTrustedRobloxUri(uri);
+
+    private static bool IsTrustedRobloxUri(Uri uri) =>
         uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort && string.IsNullOrEmpty(uri.UserInfo) &&
         uri.Host is "www.roblox.com" or "roblox.com" or "auth.roblox.com";
 

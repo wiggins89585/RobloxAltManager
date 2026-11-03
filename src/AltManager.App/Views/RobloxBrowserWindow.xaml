@@ -44,9 +44,14 @@
                         <Button Content="Home" Padding="10,2" Margin="4,0,0,0" Click="Home_Click"/>
                     </StackPanel>
 
-                    <!-- Account label (also the draggable area) -->
+                    <!-- Account label -->
                     <TextBlock x:Name="StatusText" Foreground="{StaticResource Muted}" VerticalAlignment="Center"
-                               Margin="12,0,12,0" TextTrimming="CharacterEllipsis"/>
+                               DockPanel.Dock="Right" MaxWidth="190" Margin="8,0,10,0"
+                               TextTrimming="CharacterEllipsis"/>
+
+                    <TextBox x:Name="UrlBox" VerticalAlignment="Center" Height="26" Margin="8,0"
+                             Padding="7,3" ToolTip="Roblox page URL — press Enter to navigate"
+                             Text="https://www.roblox.com/home" KeyDown="UrlBox_KeyDown"/>
                 </DockPanel>
             </Border>
 
