@@ -115,6 +115,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _presencePoll.Interval = TimeSpan.FromSeconds(45);
         _presencePoll.Tick += async (_, _) => await RefreshPresencesAsync();
         _presencePoll.Start();
+
+        _scheduleTimer.Interval = TimeSpan.FromSeconds(30);
+        _scheduleTimer.Tick += (_, _) => CheckSchedules();
+        _scheduleTimer.Start();
     }
 
     // ---------------- Presence (online / in-game dots) ----------------
@@ -427,6 +431,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         StatusMessage = $"Bulk import: {ok} added" + (failed.Count > 0 ? $", {failed.Count} failed." : ".");
+        Log(failed.Count > 0 ? ActivityLevel.Warn : ActivityLevel.Info, $"Bulk import: {ok} added, {failed.Count} failed.");
         if (failed.Count > 0)
             _dialogs.Error($"Bulk import finished: {ok} added, {failed.Count} failed.\n\n" + string.Join("\n", failed));
     }
@@ -515,6 +520,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await LoadAvatarsAsync(Accounts.Select(a => a.UserId));
             foreach (var vm in Accounts) vm.RefreshDisplay(); // update "last checked" times
             StatusMessage = $"{valid} valid, {expired} expired" + (banned > 0 ? $", {banned} banned." : ".");
+            Log(banned > 0 || expired > 0 ? ActivityLevel.Warn : ActivityLevel.Info,
+                $"Validated accounts: {valid} valid, {expired} expired, {banned} banned.");
         });
     }
 
@@ -644,6 +651,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (targets.Count > 1) await Task.Delay(400); // pace to avoid rate limits
         }
         StatusMessage = $"Joined group {groupId}: {ok}/{targets.Count}.";
+        Log(failed.Count > 0 ? ActivityLevel.Warn : ActivityLevel.Info, $"Join group {groupId}: {ok}/{targets.Count} succeeded.");
         if (failed.Count > 0) _dialogs.Error($"Joined {ok}/{targets.Count}.\n\nFailed:\n" + string.Join("\n", failed));
     }
 
@@ -706,6 +714,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (targets.Count > 1) await Task.Delay(400);
         }
         StatusMessage = $"Promo '{code}': {ok}/{targets.Count} redeemed.";
+        Log(ActivityLevel.Info, $"Promo code '{code}': {ok}/{targets.Count} redeemed.");
         if (failed.Count > 0) _dialogs.Error($"Redeemed {ok}/{targets.Count}.\n\nFailed:\n" + string.Join("\n", failed));
     }
 
@@ -844,6 +853,111 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand] private void ShowList() => IsGridView = false;
     [RelayCommand] private void ShowGrid() => IsGridView = true;
+
+    // ---------------- Activity log / notifications ----------------
+
+    public ObservableCollection<ActivityEntry> Activity { get; } = new();
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(HasUnread))] private int _unreadActivity;
+    public bool HasUnread => UnreadActivity > 0;
+
+    private static readonly string ActivityLogPath = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AltManager", "activity.log");
+
+    /// <summary>Records an event to the in-app feed and the on-disk audit log.</summary>
+    public void Log(ActivityLevel level, string text)
+    {
+        var e = new ActivityEntry { Level = level, Text = text };
+        OnUi(() =>
+        {
+            Activity.Insert(0, e);
+            while (Activity.Count > 300) Activity.RemoveAt(Activity.Count - 1);
+            UnreadActivity++;
+        });
+        try
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ActivityLogPath)!);
+            System.IO.File.AppendAllText(ActivityLogPath,
+                $"{e.Time:yyyy-MM-dd HH:mm:ss} [{level}] {text}{Environment.NewLine}");
+        }
+        catch { /* logging must never crash the app */ }
+    }
+
+    [RelayCommand]
+    private void OpenActivityLog()
+    {
+        UnreadActivity = 0;
+        _dialogs.OpenActivityLog(Activity);
+    }
+
+    // ---------------- Scheduled launches ----------------
+
+    private readonly DispatcherTimer _scheduleTimer = new();
+
+    private void CheckSchedules()
+    {
+        if (_settings.Schedules.Count == 0) return;
+        var now = DateTime.Now;
+        var hm = now.ToString("HH:mm");
+        var today = now.ToString("yyyy-MM-dd");
+        foreach (var s in _settings.Schedules.ToList())
+        {
+            if (!s.Enabled || s.Time != hm || s.LastFired == today) continue;
+            s.LastFired = today;
+            if (!s.Daily) s.Enabled = false; // one-shot
+            _settings.Save();
+            _ = FireScheduleAsync(s);
+        }
+    }
+
+    private async Task FireScheduleAsync(LaunchSchedule s)
+    {
+        var accts = Accounts.Where(a => string.IsNullOrEmpty(s.Group) ||
+                                        a.Group.Equals(s.Group, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (accts.Count == 0) { Log(ActivityLevel.Warn, $"Schedule skipped — no accounts in group '{s.Group}'."); return; }
+        var target = await BuildTargetAsync(s.Game, accts[0].Model, useLaunchPanelExtras: false);
+        if (target is null) { Log(ActivityLevel.Warn, $"Schedule skipped — couldn't read game '{s.Game}'."); return; }
+        Log(ActivityLevel.Info, $"Schedule firing: launching {accts.Count} account(s) into {s.Game}.");
+        await LaunchAccountsAsync(accts, target);
+    }
+
+    /// <summary>Launches an explicit set of accounts into one game (used by schedules).</summary>
+    private async Task LaunchAccountsAsync(IReadOnlyList<AccountViewModel> accounts, LaunchTarget target)
+    {
+        if (IsLaunching) { Log(ActivityLevel.Warn, "Launch skipped — another launch is already running."); return; }
+        if (!_guard.IsActive && !_guard.Acquire() && accounts.Count > 1)
+        {
+            Log(ActivityLevel.Warn, "Launch skipped — multi-instance mode is off (close all Roblox windows).");
+            OnPropertyChanged(nameof(MultiInstanceActive));
+            return;
+        }
+        OnPropertyChanged(nameof(MultiInstanceActive));
+        foreach (var a in accounts) { _lastTarget[a.Model.Id] = target; _userClosed.Remove(a.Model.Id); }
+        RecordGameHistory(new[] { target.PlaceId });
+
+        IsLaunching = true;
+        _launchCts = new CancellationTokenSource();
+        var progress = new Progress<LaunchProgress>(p =>
+        {
+            var vm = Accounts.FirstOrDefault(a => a.Model.Id == p.Account.Id);
+            if (vm is not null) vm.LaunchState = p.Stage + (p.Message is null ? "" : $": {p.Message}");
+        });
+        try
+        {
+            await _engine.LaunchBatchAsync(accounts.Select(a => a.Model).ToList(), target,
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)) }, progress, _launchCts.Token);
+        }
+        finally
+        {
+            IsLaunching = false;
+            _launchCts.Dispose();
+            _launchCts = null;
+            await _vault.SaveAsync();
+        }
+    }
+
+    [RelayCommand]
+    private void OpenSchedules() =>
+        _dialogs.OpenSchedules(_settings.Schedules, Groups.Where(g => g != AllGroups), () => _settings.Save());
 
     [RelayCommand]
     private void OpenServerBrowser()
@@ -1133,6 +1247,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private async Task RejoinAsync(AccountViewModel vm, LaunchTarget target)
     {
         StatusMessage = $"Auto-rejoin: {vm.Label} in 5s…";
+        Log(ActivityLevel.Warn, $"{vm.Label} closed unexpectedly — auto-rejoining.");
         await Task.Delay(5000);
         if (!_settings.AutoRejoin || _tracker.IsRunning(vm.Model.Id)) return;
         var progress = new Progress<LaunchProgress>(pr =>
@@ -1191,6 +1306,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _boundsPoll.Stop();
         _presencePoll.Stop();
+        _scheduleTimer.Stop();
         _autoValidate.Stop();
         _clipboardClear?.Stop();
         _launchCts?.Cancel();

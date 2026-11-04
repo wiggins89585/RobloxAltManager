@@ -111,6 +111,16 @@
                             WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
                             ToolTip="Games you've launched (click one to reuse it)"/>
+                    <Button Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Activity log / notifications">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Log"/>
+                            <TextBlock Text=" ●" Foreground="#F23F43"
+                                       Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="Schedules" Command="{Binding OpenSchedulesCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Scheduled launches"/>
                     <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
                             ToolTip="Mask or show usernames and IDs"/>
                     <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"

@@ -33,6 +33,28 @@ public sealed class StatusToBrushConverter : IValueConverter
     }
 }
 
+public sealed class ActivityLevelToBrushConverter : IValueConverter
+{
+    private static readonly Brush Info = Frozen("#949BA4");
+    private static readonly Brush Warn = Frozen("#F0B232");
+    private static readonly Brush Alert = Frozen("#F23F43");
+
+    public object Convert(object value, Type t, object p, CultureInfo c) => value switch
+    {
+        AltManager.App.ViewModels.ActivityLevel.Warn => Warn,
+        AltManager.App.ViewModels.ActivityLevel.Alert => Alert,
+        _ => Info
+    };
+    public object ConvertBack(object v, Type t, object p, CultureInfo c) => throw new NotSupportedException();
+
+    private static Brush Frozen(string hex)
+    {
+        var b = (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
+        b.Freeze();
+        return b;
+    }
+}
+
 public sealed class PresenceToBrushConverter : IValueConverter
 {
     private static readonly Brush Offline = Frozen("#80848E");

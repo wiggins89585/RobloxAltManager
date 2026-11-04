@@ -33,6 +33,10 @@ public interface IDialogService
                          RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie);
     /// <summary>Opens the server browser for a place; onJoin gets the chosen job ID.</summary>
     void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin);
+    /// <summary>Opens the activity-log window (non-modal), bound live to the feed.</summary>
+    void OpenActivityLog(System.Collections.ObjectModel.ObservableCollection<ViewModels.ActivityEntry> activity);
+    /// <summary>Opens the scheduled-launches manager (modal); save is called after each change.</summary>
+    void OpenSchedules(List<LaunchSchedule> schedules, IEnumerable<string> groups, Action save);
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
@@ -126,6 +130,12 @@ public sealed class DialogService : IDialogService
 
     public void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin) =>
         new ServerBrowserWindow(placeId, api, onJoin) { Owner = Owner }.Show();
+
+    public void OpenActivityLog(System.Collections.ObjectModel.ObservableCollection<ViewModels.ActivityEntry> activity) =>
+        new ActivityWindow(activity) { Owner = Owner }.Show();
+
+    public void OpenSchedules(List<LaunchSchedule> schedules, IEnumerable<string> groups, Action save) =>
+        new SchedulesWindow(schedules, groups, save) { Owner = Owner }.ShowDialog();
 
     private static System.Windows.Media.Brush Brush(string hex) =>
         (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;

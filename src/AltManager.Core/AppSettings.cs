@@ -13,6 +13,18 @@ public sealed class LaunchPreset
     public string PrivateServerLinkCode { get; set; } = "";
 }
 
+/// <summary>A saved schedule that launches a group into a game at a set time.</summary>
+public sealed class LaunchSchedule
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public bool Enabled { get; set; } = true;
+    public string Group { get; set; } = "";      // account group to launch; "" = all accounts
+    public string Game { get; set; } = "";        // place ID / game link
+    public string Time { get; set; } = "12:00";    // local HH:mm
+    public bool Daily { get; set; } = true;        // repeat each day vs one-shot
+    public string LastFired { get; set; } = "";    // yyyy-MM-dd of the last fire, to avoid double-firing
+}
+
 /// <summary>A game the user has launched, for the game-history view.</summary>
 public sealed class GameHistoryEntry
 {
@@ -63,6 +75,7 @@ public sealed class AppSettings
 
     public List<LaunchPreset> Presets { get; set; } = new();
     public List<GameHistoryEntry> GameHistory { get; set; } = new();
+    public List<LaunchSchedule> Schedules { get; set; } = new();
 
     // ---------------- Persistence ----------------
 

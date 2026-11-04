@@ -6,6 +6,7 @@
     <Application.Resources>
         <conv:StatusToBrushConverter x:Key="StatusBrush"/>
         <conv:PresenceToBrushConverter x:Key="PresenceBrush"/>
+        <conv:ActivityLevelToBrushConverter x:Key="ActivityBrush"/>
         <conv:StatusToTextConverter x:Key="StatusText"/>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
         <conv:InverseBoolToVisibilityConverter x:Key="BoolVisInv"/>
