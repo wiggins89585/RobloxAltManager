@@ -41,6 +41,8 @@ public partial class MainWindow : Window
             // Windows 11 rounds the borderless window; older Windows ignores this (call just fails).
             var pref = DWMWCP_ROUND;
             DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
+            // The handle now exists, so the Mica/Acrylic backdrop for glass themes can be applied.
+            Services.Theme.ReapplyBackdrop();
         };
 
         // Any input defers the idle auto-lock.

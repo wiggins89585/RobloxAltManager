@@ -28,8 +28,9 @@ public static class Theme
         new ThemePreset("Midnight",      "#0B0D10", "#15181D", "#1E232B", "#272D37", "#262B33", "#E6EAF0", "#8A93A3", "#3B82F6", "#16305E"),
         new ThemePreset("Windows XP",    "#ECE9D8", "#FFFFFF", "#D4D0C8", "#C8E0F4", "#919B9C", "#101828", "#3A4A5A", "#2F6FD8", "#CBD9F2"),
         new ThemePreset("Frutiger Aero", "#DCF2FF", "#FFFFFF", "#C7E9F7", "#B2E2F2", "#8FCBE2", "#0B2A3A", "#3E6A80", "#17B6C9", "#BDEAF4"),
-        new ThemePreset("Liquid Glass",  "#EEF1F6", "#FBFCFE", "#E2E8F1", "#D4DEEB", "#CFD8E3", "#1A2230", "#5A6577", "#3B82F6", "#D7E4FA"),
-        new ThemePreset("macOS",         "#ECECEC", "#FFFFFF", "#E4E4E6", "#D8D8DB", "#D0D0D3", "#1D1D1F", "#6E6E73", "#0A84FF", "#D4E7FE"),
+        // Liquid Glass / macOS use translucent panels so the Acrylic/Mica backdrop reads as frosted glass.
+        new ThemePreset("Liquid Glass",  "#EAF0F8", "#B8FFFFFF", "#8CFFFFFF", "#A6DCE8F8", "#66AEC2DA", "#10203A", "#4A5A74", "#2F7BF6", "#99B9D6FA"),
+        new ThemePreset("macOS",         "#ECECEC", "#EAFFFFFF", "#D9E4E4E6", "#C8D8D8DB", "#D0D0D3", "#1D1D1F", "#6E6E73", "#0A84FF", "#D4E7FE"),
         new ThemePreset("Dracula",       "#282A36", "#343746", "#44475A", "#4F5267", "#44475A", "#F8F8F2", "#9FA3B3", "#BD93F9", "#3B3A5A"),
         new ThemePreset("Nord",          "#2E3440", "#3B4252", "#434C5E", "#4C566A", "#434C5E", "#ECEFF4", "#A9B2C3", "#88C0D0", "#3A4961"),
     };
@@ -67,14 +68,37 @@ public static class Theme
         var accent = TryParseColor(accentOverride, out _) && !string.IsNullOrWhiteSpace(accentOverride)
             ? accentOverride! : t.Accent;
         ApplyAccent(accent);
+
+        _currentTheme = t.Name;
+        ApplyBackdrop();
+    }
+
+    private static string _currentTheme = DefaultTheme;
+
+    /// <summary>Which Win11 backdrop a theme wants behind its (translucent) surfaces.</summary>
+    public static WindowBackdrop.Kind BackdropFor(string? name) => Find(name).Name switch
+    {
+        "Liquid Glass"  => WindowBackdrop.Kind.Acrylic, // stronger blur = liquid glass
+        "macOS"         => WindowBackdrop.Kind.Mica,
+        "Frutiger Aero" => WindowBackdrop.Kind.Mica,
+        _               => WindowBackdrop.Kind.None,
+    };
+
+    /// <summary>Re-applies the current theme's backdrop to the main window (call once the handle exists).</summary>
+    public static void ReapplyBackdrop() => ApplyBackdrop();
+
+    private static void ApplyBackdrop()
+    {
+        if (Application.Current?.MainWindow is { } w)
+            WindowBackdrop.Apply(w, BackdropFor(_currentTheme));
     }
 
     private static Brush BuildTitleBar(ThemePreset t) => t.Name switch
     {
         "Windows XP"    => VGrad("#3F8CEA", "#245EDC", "#1941A5"),   // Luna blue
         "Frutiger Aero" => VGrad("#86E3F7", "#28A9DD", "#1687C4"),   // glossy sky
-        "Liquid Glass"  => VGrad("#FFFFFF", "#EEF4FC", "#DCE7F6"),   // frosted light
-        "macOS"         => Solid("#E6E6E8"),
+        "Liquid Glass"  => VGrad("#CCFFFFFF", "#A6EAF2FC", "#8CD6E6F6"), // translucent frost (acrylic shows through)
+        "macOS"         => Solid("#D0EDEDEF"),
         "Light"         => Solid("#E7E9EC"),
         _               => Solid(t.Bg),                             // dark themes: flat
     };
