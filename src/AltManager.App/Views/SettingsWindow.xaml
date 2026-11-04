@@ -64,6 +64,25 @@
 
         <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
 
+        <TextBlock Text="LOCAL AUTOMATION API" Style="{StaticResource Heading}"/>
+        <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap"
+                   Text="A localhost-only HTTP API so scripts, Stream Deck, or hotkey tools can list and launch accounts. Binds to 127.0.0.1 only and requires the token below on every request."/>
+        <CheckBox x:Name="ApiEnabled" Content="Enable the local API" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+            <TextBlock Text="Port" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+            <TextBox x:Name="ApiPort" Width="64" Margin="8,0,0,0"/>
+        </StackPanel>
+        <TextBlock Text="Token (send as 'Authorization: Bearer &lt;token&gt;')" Style="{StaticResource Label}" Margin="0,8,0,2"/>
+        <TextBox x:Name="ApiToken" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas"/>
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+            <Button Content="Copy token" Click="CopyToken_Click"/>
+            <Button Content="Regenerate" Click="RegenToken_Click"/>
+        </StackPanel>
+        <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Text="Endpoints: GET /ping · GET /accounts · GET /groups · POST /launch {&quot;game&quot;,&quot;accounts&quot;,&quot;group&quot;}"/>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
         <TextBlock Text="VAULT BACKUP" Style="{StaticResource Heading}"/>
         <TextBlock Text="The backup is the encrypted vault file; it needs the same master password to open." Style="{StaticResource Label}" TextWrapping="Wrap"/>
         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">

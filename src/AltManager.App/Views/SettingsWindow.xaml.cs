@@ -28,7 +28,20 @@ public partial class SettingsWindow : Window
         RememberView.IsChecked = _s.RememberView;
         CardWidth.Text = _s.CardWidth.ToString();
         UserAgent.Text = _s.CustomUserAgent;
+        ApiEnabled.IsChecked = _s.LocalApiEnabled;
+        ApiPort.Text = _s.LocalApiPort.ToString();
+        ApiToken.Text = string.IsNullOrWhiteSpace(_s.LocalApiToken)
+            ? Services.LocalApiServer.NewToken()
+            : _s.LocalApiToken;
     }
+
+    private void CopyToken_Click(object sender, RoutedEventArgs e)
+    {
+        try { Clipboard.SetText(ApiToken.Text); } catch { /* clipboard busy */ }
+    }
+
+    private void RegenToken_Click(object sender, RoutedEventArgs e) =>
+        ApiToken.Text = Services.LocalApiServer.NewToken();
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
@@ -57,6 +70,9 @@ public partial class SettingsWindow : Window
         _s.RememberView = RememberView.IsChecked == true;
         _s.CardWidth = ParseClamp(CardWidth.Text, 165, 120, 320);
         _s.CustomUserAgent = UserAgent.Text.Trim();
+        _s.LocalApiEnabled = ApiEnabled.IsChecked == true;
+        _s.LocalApiPort = ParseClamp(ApiPort.Text, 7963, 1024, 65535);
+        _s.LocalApiToken = ApiToken.Text.Trim();
         _s.Save();
         DialogResult = true;
     }

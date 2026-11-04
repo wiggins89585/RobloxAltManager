@@ -336,7 +336,7 @@
                         Visibility="{Binding IsGridView, Converter={StaticResource BoolVisInv}}">
                 <DataGrid ItemsSource="{Binding AccountsView}" AutoGenerateColumns="False"
                           CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
-                          RowHeight="38" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource Line}"
+                          MinRowHeight="42" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource Line}"
                           SelectionMode="Extended" FontSize="12"
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           Background="{StaticResource Panel}" RowBackground="{StaticResource Panel}"

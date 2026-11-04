@@ -74,6 +74,11 @@ public sealed class AppSettings
     // Browser
     public string CustomUserAgent { get; set; } = "";
 
+    // Local automation API (opt-in; binds to 127.0.0.1 only, bearer-token protected)
+    public bool LocalApiEnabled { get; set; }
+    public int LocalApiPort { get; set; } = 7963;
+    public string LocalApiToken { get; set; } = "";
+
     public List<LaunchPreset> Presets { get; set; } = new();
     public List<GameHistoryEntry> GameHistory { get; set; } = new();
     public List<LaunchSchedule> Schedules { get; set; } = new();

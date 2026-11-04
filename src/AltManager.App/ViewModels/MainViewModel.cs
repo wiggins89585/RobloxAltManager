@@ -15,7 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AltManager.App.ViewModels;
 
-public partial class MainViewModel : ObservableObject, IDisposable
+public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBackend
 {
     public const string AllGroups = "All accounts";
 
@@ -29,6 +29,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly DispatcherTimer _autoValidate = new();
     private DispatcherTimer? _clipboardClear;
     private CancellationTokenSource? _launchCts;
+    private readonly LocalApiServer _localApi;
 
     public ObservableCollection<string> Presets { get; } = new();
     /// <summary>Status-column filter: "All", "Valid", "Expired", "Banned", "Unchecked".</summary>
@@ -123,6 +124,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _idleTimer.Interval = TimeSpan.FromSeconds(20);
         _idleTimer.Tick += (_, _) => CheckIdleLock();
         _idleTimer.Start();
+
+        _localApi = new LocalApiServer(this);
+        ApplyLocalApiSettings();
     }
 
     // ---------------- Presence (online / in-game dots) ----------------
@@ -1083,7 +1087,142 @@ public partial class MainViewModel : ObservableObject, IDisposable
             mainWindow.Topmost = _settings.AlwaysOnTop;
         ApplyStreamerMode(_settings.StreamerMode);
         ConfigureAutoValidate();
+        ApplyLocalApiSettings();
         OnPropertyChanged(nameof(CardWidth));
+    }
+
+    // ---------------- Local automation API ----------------
+
+    /// <summary>Starts or stops the loopback API to match the current settings.</summary>
+    public void ApplyLocalApiSettings()
+    {
+        try
+        {
+            if (_settings.LocalApiEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(_settings.LocalApiToken))
+                {
+                    _settings.LocalApiToken = LocalApiServer.NewToken();
+                    _settings.Save();
+                }
+                _localApi.Start(_settings.LocalApiPort, _settings.LocalApiToken);
+                Log(ActivityLevel.Info, $"Local API listening on http://127.0.0.1:{_localApi.Port}");
+            }
+            else
+            {
+                _localApi.Stop();
+            }
+        }
+        catch (Exception ex)
+        {
+            _localApi.Stop();
+            Log(ActivityLevel.Warn, $"Local API could not start on port {_settings.LocalApiPort}: {ex.Message}");
+        }
+    }
+
+    Task<IReadOnlyList<ApiAccount>> ILocalApiBackend.GetAccountsAsync() =>
+        Application.Current.Dispatcher.InvokeAsync(() =>
+            (IReadOnlyList<ApiAccount>)Accounts.Select(a => new ApiAccount(
+                a.Model.Id.ToString(), a.Model.Username, a.Model.UserId, a.Group,
+                a.Status.ToString(), a.Favorite, a.Presence.ToString())).ToList()).Task;
+
+    Task<IReadOnlyList<string>> ILocalApiBackend.GetGroupsAsync() =>
+        Application.Current.Dispatcher.InvokeAsync(() =>
+            (IReadOnlyList<string>)Groups.Where(g => g != AllGroups).ToList()).Task;
+
+    Task<ApiLaunchResult> ILocalApiBackend.LaunchAsync(ApiLaunchRequest request) =>
+        Application.Current.Dispatcher.InvokeAsync(() => LaunchViaApiAsync(request)).Task.Unwrap();
+
+    /// <summary>Resolves the requested accounts and game, then fires the batch launch (does not block on it).</summary>
+    private async Task<ApiLaunchResult> LaunchViaApiAsync(ApiLaunchRequest req)
+    {
+        List<AccountViewModel> chosen;
+        if (req.Accounts is { Length: > 0 })
+        {
+            var wanted = req.Accounts.Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+            chosen = Accounts.Where(a =>
+                wanted.Any(w => w.Equals(a.Model.Username, StringComparison.OrdinalIgnoreCase)
+                                || w == a.Model.UserId.ToString())).ToList();
+        }
+        else if (!string.IsNullOrWhiteSpace(req.Group))
+        {
+            chosen = Accounts.Where(a => a.Group.Equals(req.Group, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        else
+        {
+            chosen = Accounts.Where(a => a.IsSelected).ToList();
+        }
+
+        if (chosen.Count == 0) return new ApiLaunchResult(false, 0, "No matching accounts.");
+        if (IsLaunching) return new ApiLaunchResult(false, 0, "A launch is already running.");
+
+        var explicitGame = !string.IsNullOrWhiteSpace(req.Game);
+        var gameInput = explicitGame ? req.Game!.Trim() : PlaceInput;
+
+        LaunchTarget? defaultTarget = null;
+        if (!string.IsNullOrWhiteSpace(gameInput))
+        {
+            defaultTarget = await BuildTargetAsync(gameInput, chosen[0].Model, useLaunchPanelExtras: !explicitGame);
+            if (defaultTarget is null) return new ApiLaunchResult(false, 0, StatusMessage);
+        }
+
+        var targets = new Dictionary<Guid, LaunchTarget>();
+        foreach (var a in chosen)
+        {
+            if (!string.IsNullOrWhiteSpace(a.GameOverride))
+            {
+                var own = await BuildTargetAsync(a.GameOverride, a.Model, useLaunchPanelExtras: false);
+                if (own is null) return new ApiLaunchResult(false, 0, $"{a.Label}: {StatusMessage}");
+                targets[a.Model.Id] = own;
+            }
+            else if (defaultTarget is not null)
+            {
+                targets[a.Model.Id] = defaultTarget;
+            }
+            else
+            {
+                return new ApiLaunchResult(false, 0, $"{a.Label} has no game — provide 'game' or set the Launch panel.");
+            }
+        }
+
+        if (!_guard.IsActive && !_guard.Acquire() && chosen.Count > 1)
+        {
+            OnPropertyChanged(nameof(MultiInstanceActive));
+            return new ApiLaunchResult(false, 0, "Multi-instance mode is off — close all Roblox windows first.");
+        }
+        OnPropertyChanged(nameof(MultiInstanceActive));
+
+        Log(ActivityLevel.Info, $"Local API: launching {chosen.Count} account(s).");
+        _ = RunApiBatchAsync(chosen, targets);
+        return new ApiLaunchResult(true, chosen.Count, $"Launching {chosen.Count} account(s).");
+    }
+
+    private async Task RunApiBatchAsync(List<AccountViewModel> accounts, Dictionary<Guid, LaunchTarget> targets)
+    {
+        RecordGameHistory(targets.Values.Select(t => t.PlaceId));
+        foreach (var kv in targets) { _lastTarget[kv.Key] = kv.Value; _userClosed.Remove(kv.Key); }
+
+        IsLaunching = true;
+        _launchCts = new CancellationTokenSource();
+        var progress = new Progress<LaunchProgress>(p =>
+        {
+            var vm = Accounts.FirstOrDefault(a => a.Model.Id == p.Account.Id);
+            if (vm is not null) vm.LaunchState = p.Stage + (p.Message is null ? "" : $": {p.Message}");
+        });
+        try
+        {
+            await _engine.LaunchBatchAsync(accounts.Select(a => a.Model).ToList(), a => targets[a.Id],
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)) },
+                progress, _launchCts.Token);
+        }
+        catch { /* logged via progress; API already acknowledged */ }
+        finally
+        {
+            IsLaunching = false;
+            _launchCts?.Dispose();
+            _launchCts = null;
+            await _vault.SaveAsync();
+        }
     }
 
     [RelayCommand]
@@ -1378,6 +1517,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _idleTimer.Stop();
         _autoValidate.Stop();
         _clipboardClear?.Stop();
+        _localApi.Dispose();
         _launchCts?.Cancel();
         _tracker.Dispose();
         _api.Dispose();
