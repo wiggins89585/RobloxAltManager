@@ -39,6 +39,12 @@ public sealed class Account
     public bool Favorite { get; set; }
     /// <summary>Last game-client window position/size for this account; restored on the next launch.</summary>
     public SavedWindowBounds? WindowBounds { get; set; }
+
+    // Cached account info (refreshed on demand), persisted so columns show immediately next launch.
+    public long? Robux { get; set; }
+    public bool? Premium { get; set; }
+    public DateTimeOffset? Created { get; set; }
+    public DateTimeOffset? InfoUpdated { get; set; }
     public AccountStatus Status { get; set; } = AccountStatus.Unknown;
     public DateTimeOffset? LastValidated { get; set; }
     public DateTimeOffset Added { get; init; } = DateTimeOffset.UtcNow;

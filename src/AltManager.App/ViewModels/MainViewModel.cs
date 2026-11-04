@@ -597,6 +597,64 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    private async Task RefreshInfoAsync(AccountViewModel? vm)
+    {
+        var targets = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
+        if (targets.Count == 0) targets = Accounts.ToList();
+        if (targets.Count == 0) return;
+
+        int i = 0;
+        foreach (var t in targets)
+        {
+            StatusMessage = $"Fetching info {++i}/{targets.Count}: {t.Label}…";
+            string cookie;
+            try { cookie = _vault.GetCookie(t.Model); } catch { continue; }
+
+            t.Model.Robux = await _api.GetRobuxAsync(cookie);
+            t.Model.Premium = await _api.GetPremiumAsync(t.UserId, cookie);
+            t.Model.Created ??= await _api.GetCreatedAsync(t.UserId); // created never changes
+            t.Model.InfoUpdated = DateTimeOffset.UtcNow;
+            t.RefreshInfo();
+            if (targets.Count > 1) await Task.Delay(200);
+        }
+        await _vault.SaveAsync();
+        StatusMessage = $"Refreshed info for {targets.Count} account(s).";
+    }
+
+    [RelayCommand]
+    private async Task JoinGroupAsync(AccountViewModel? vm)
+    {
+        var targets = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
+        if (targets.Count == 0) { StatusMessage = "Select accounts first."; return; }
+        var input = _dialogs.Prompt("Join Roblox group", $"Group ID for {targets.Count} account(s) to join:");
+        if (!long.TryParse(input, out var groupId) || groupId <= 0) return;
+
+        int ok = 0;
+        var failed = new List<string>();
+        for (var i = 0; i < targets.Count; i++)
+        {
+            var t = targets[i];
+            StatusMessage = $"Joining group {i + 1}/{targets.Count}: {t.Label}…";
+            string cookie;
+            try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); continue; }
+            var (joined, msg) = await _api.JoinGroupAsync(groupId, cookie);
+            if (joined) ok++; else failed.Add($"{t.Label} ({msg})");
+            if (targets.Count > 1) await Task.Delay(400); // pace to avoid rate limits
+        }
+        StatusMessage = $"Joined group {groupId}: {ok}/{targets.Count}.";
+        if (failed.Count > 0) _dialogs.Error($"Joined {ok}/{targets.Count}.\n\nFailed:\n" + string.Join("\n", failed));
+    }
+
+    [RelayCommand]
+    private void GroupPayout(AccountViewModel? vm)
+    {
+        var recipients = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
+        if (recipients.Count == 0) { StatusMessage = "Select the accounts to pay first."; return; }
+        _dialogs.OpenGroupPayout(Accounts.ToList(), recipients, _api,
+            a => { try { return _vault.GetCookie(a.Model); } catch { return null; } });
+    }
+
+    [RelayCommand]
     private void OpenBrowser(AccountViewModel? vm)
     {
         if (vm is null) return;

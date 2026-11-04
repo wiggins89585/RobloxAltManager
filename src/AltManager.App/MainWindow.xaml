@@ -58,6 +58,15 @@
                       Command="{Binding PlacementTarget.Tag.UseLaunchGameForAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="Clear own game" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.ClearAccountGameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <TextBlock Text="ACCOUNT" Style="{StaticResource MenuHeader}"/>
+            <MenuItem Header="↻  Refresh info (Robux / Premium / age)" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.RefreshInfoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="👥  Join Roblox group…" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.JoinGroupCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="💸  Give group Robux…" CommandParameter="{Binding}"
+                      ToolTip="Pay Robux from a group you own to the selected accounts"
+                      Command="{Binding PlacementTarget.Tag.GroupPayoutCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
     </Window.Resources>
 
@@ -368,6 +377,22 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="ROBUX" Width="70" IsReadOnly="True"
+                                            Binding="{Binding RobuxText}" Foreground="{StaticResource Fg}"/>
+
+                        <DataGridTemplateColumn Header="PREM" Width="52" SortMemberPath="IsPremium">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:AccountViewModel">
+                                    <TextBlock Text="★" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Foreground="#F0B232" ToolTip="Premium"
+                                               Visibility="{Binding IsPremium, Converter={StaticResource BoolVis}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="AGE" Width="50" IsReadOnly="True"
+                                            Binding="{Binding AgeText}" Foreground="{StaticResource Muted}"/>
 
                         <DataGridTextColumn Header="GAME ID" Width="1.2*"
                                             Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}">

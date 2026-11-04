@@ -27,6 +27,10 @@ public interface IDialogService
     /// <summary>Opens the game-history window (non-modal). onClose reports removed place ids.</summary>
     void OpenGameHistory(IReadOnlyList<GameHistoryEntry> history, RobloxApiClient api, string? cookie,
                          Action<long> onUse, Action<IReadOnlyList<long>> onClose);
+    /// <summary>Opens the group-payout window (modal).</summary>
+    void OpenGroupPayout(IReadOnlyList<ViewModels.AccountViewModel> allAccounts,
+                         IReadOnlyList<ViewModels.AccountViewModel> recipients,
+                         RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie);
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
@@ -112,6 +116,11 @@ public sealed class DialogService : IDialogService
         w.Closed += (_, _) => onClose(w.RemovedPlaceIds);
         w.Show();
     }
+
+    public void OpenGroupPayout(IReadOnlyList<ViewModels.AccountViewModel> allAccounts,
+                                IReadOnlyList<ViewModels.AccountViewModel> recipients,
+                                RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie) =>
+        new GroupPayoutWindow(allAccounts, recipients, api, getCookie) { Owner = Owner }.ShowDialog();
 
     private static System.Windows.Media.Brush Brush(string hex) =>
         (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;

@@ -1,0 +1,44 @@
+<Window x:Class="AltManager.App.Views.GroupPayoutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Give Group Robux" Width="430" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
+    <StackPanel Margin="16">
+        <TextBlock Text="Pay Robux from a group you own to the selected accounts (one-time group payout)."
+                   Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"/>
+
+        <TextBlock Text="Payer (group owner account)" Style="{StaticResource Label}"/>
+        <ComboBox x:Name="PayerBox" DisplayMemberPath="Label"/>
+
+        <TextBlock Text="Group ID" Style="{StaticResource Label}"/>
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Check funds" Margin="6,0,0,0" Click="CheckFunds_Click"/>
+            <TextBox x:Name="GroupBox"/>
+        </DockPanel>
+        <TextBlock x:Name="FundsText" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,4,0,0"/>
+
+        <TextBlock Text="Robux to each account" Style="{StaticResource Label}"/>
+        <TextBox x:Name="AmountBox" Text="1" TextChanged="Amount_TextChanged"/>
+
+        <TextBlock Text="Recipients" Style="{StaticResource Label}"/>
+        <Border Background="{StaticResource Panel}" CornerRadius="5" Padding="6" MaxHeight="140">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="Recipients">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" FontSize="12" Margin="2,1"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <TextBlock x:Name="TotalText" Margin="0,8,0,0" FontWeight="SemiBold"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="PayButton" Content="Pay" Width="100" Style="{StaticResource AccentButton}" Click="Pay_Click"/>
+            <Button Content="Close" Width="90" IsCancel="True" Margin="0"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -88,6 +88,28 @@ public partial class AccountViewModel : ObservableObject
 
     public bool HasPassword => !string.IsNullOrEmpty(Model.EncryptedPassword);
 
+    // ---- Cached account info (Refresh info) ----
+    public string RobuxText => Model.Robux is { } r ? r.ToString("N0") : "—";
+    public string PremiumText => Model.Premium is true ? "Premium" : Model.Premium is false ? "—" : "?";
+    public bool IsPremium => Model.Premium is true;
+    public string AgeText
+    {
+        get
+        {
+            if (Model.Created is not { } c) return "—";
+            var days = (DateTimeOffset.UtcNow - c).TotalDays;
+            return days >= 365 ? $"{days / 365:0.0}y" : $"{(int)days}d";
+        }
+    }
+
+    public void RefreshInfo()
+    {
+        OnPropertyChanged(nameof(RobuxText));
+        OnPropertyChanged(nameof(PremiumText));
+        OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(AgeText));
+    }
+
     public AccountStatus Status
     {
         get => Model.Status;

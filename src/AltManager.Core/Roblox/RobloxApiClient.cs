@@ -247,6 +247,117 @@ public sealed class RobloxApiClient : IDisposable
         return result;
     }
 
+    // ---------- Account info ----------
+
+    /// <summary>The account's own Robux balance (its own cookie).</summary>
+    public async Task<long?> GetRobuxAsync(string cookie, CancellationToken ct = default)
+    {
+        using var req = Build(HttpMethod.Get, "https://economy.roblox.com/v1/user/currency", cookie);
+        try
+        {
+            using var res = await _http.SendAsync(req, ct);
+            if (!res.IsSuccessStatusCode) return null;
+            var dto = await res.Content.ReadFromJsonAsync<CurrencyDto>(cancellationToken: ct);
+            return dto?.Robux;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
+    }
+
+    /// <summary>Whether the account has Premium (its own cookie).</summary>
+    public async Task<bool?> GetPremiumAsync(long userId, string cookie, CancellationToken ct = default)
+    {
+        using var req = Build(HttpMethod.Get, $"https://premiumfeatures.roblox.com/v1/users/{userId}/validate-membership", cookie);
+        try
+        {
+            using var res = await _http.SendAsync(req, ct);
+            if (!res.IsSuccessStatusCode) return null;
+            var body = await res.Content.ReadAsStringAsync(ct);
+            return bool.TryParse(body.Trim(), out var b) ? b : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
+    }
+
+    /// <summary>When the account was created (public endpoint).</summary>
+    public async Task<DateTimeOffset?> GetCreatedAsync(long userId, CancellationToken ct = default)
+    {
+        try
+        {
+            var dto = await _http.GetFromJsonAsync<UserInfoDto>($"https://users.roblox.com/v1/users/{userId}", ct);
+            return dto?.Created;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { return null; }
+    }
+
+    // ---------- Groups ----------
+
+    /// <summary>Joins a Roblox group with the given account. Approval-only groups return a message instead.</summary>
+    public async Task<(bool Ok, string Message)> JoinGroupAsync(long groupId, string cookie, CancellationToken ct = default)
+    {
+        try
+        {
+            using var res = await SendWithCsrfAsync(() =>
+            {
+                var r = Build(HttpMethod.Post, $"https://groups.roblox.com/v1/groups/{groupId}/users", cookie);
+                r.Content = JsonContent.Create(new { });
+                return r;
+            }, cookie, ct);
+            if (res.IsSuccessStatusCode) return (true, "joined");
+            return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
+    }
+
+    /// <summary>The group's Robux fund balance (a cookie with group-funds permission).</summary>
+    public async Task<long?> GetGroupFundsAsync(long groupId, string cookie, CancellationToken ct = default)
+    {
+        using var req = Build(HttpMethod.Get, $"https://economy.roblox.com/v1/groups/{groupId}/currency", cookie);
+        try
+        {
+            using var res = await _http.SendAsync(req, ct);
+            if (!res.IsSuccessStatusCode) return null;
+            var dto = await res.Content.ReadFromJsonAsync<CurrencyDto>(cancellationToken: ct);
+            return dto?.Robux;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
+    }
+
+    /// <summary>One-time group payout: pays each recipient a fixed Robux amount from group funds (payer cookie).</summary>
+    public async Task<(bool Ok, string Message)> GroupPayoutAsync(
+        long groupId, string cookie, IReadOnlyList<(long UserId, long Amount)> recipients, CancellationToken ct = default)
+    {
+        if (recipients.Count == 0) return (false, "no recipients");
+        try
+        {
+            using var res = await SendWithCsrfAsync(() =>
+            {
+                var r = Build(HttpMethod.Post, $"https://groups.roblox.com/v1/groups/{groupId}/payouts", cookie);
+                r.Content = JsonContent.Create(new
+                {
+                    PayoutType = "FixedAmount",
+                    Recipients = recipients.Select(x => new { recipientId = x.UserId, recipientType = "User", amount = x.Amount })
+                });
+                return r;
+            }, cookie, ct);
+            if (res.IsSuccessStatusCode) return (true, "paid");
+            return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
+    }
+
+    /// <summary>Pulls the first Roblox API error message out of a JSON error body, if present.</summary>
+    private static string? ExtractError(string body)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("errors", out var errs) && errs.GetArrayLength() > 0 &&
+                errs[0].TryGetProperty("message", out var m))
+                return m.GetString();
+        }
+        catch (System.Text.Json.JsonException) { /* not JSON */ }
+        return null;
+    }
+
     // ---------- Private server share links ----------
 
     /// <summary>
@@ -356,6 +467,9 @@ public sealed class RobloxApiClient : IDisposable
         [property: JsonPropertyName("rootPlaceId")] long? RootPlaceId,
         [property: JsonPropertyName("name")] string? Name,
         [property: JsonPropertyName("playerCount")] long? PlayerCount);
+
+    private sealed record CurrencyDto([property: JsonPropertyName("robux")] long Robux);
+    private sealed record UserInfoDto([property: JsonPropertyName("created")] DateTimeOffset? Created);
 
     private sealed record PresenceResponse([property: JsonPropertyName("userPresences")] List<PresenceDto>? UserPresences);
     private sealed record PresenceDto(
