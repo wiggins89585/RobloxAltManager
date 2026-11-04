@@ -12,7 +12,9 @@
         mc:Ignorable="d">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0"
+        <!-- GlassFrameThickness=-1 extends the DWM glass over the whole window so the Mica/Acrylic
+             backdrop (enabled per-theme) can paint behind a transparent background. -->
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="-1"
                       CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 

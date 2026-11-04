@@ -26,15 +26,21 @@ public static class WindowBackdrop
         var hwnd = new WindowInteropHelper(window).Handle;
         if (hwnd == IntPtr.Zero) return; // call again from SourceInitialized once the handle is up
 
+        // Try to set the backdrop; the HRESULT tells us whether this OS supports it (don't trust
+        // Environment.OSVersion — without a supportedOS manifest it reports Windows 8).
         // DWM_SYSTEMBACKDROP_TYPE: 1 = None, 2 = Mica, 3 = Acrylic, 4 = Mica Alt
         var backdrop = kind switch { Kind.Mica => 2, Kind.Acrylic => 3, Kind.MicaAlt => 4, _ => 1 };
         var hr = DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
-
         var enabled = kind != Kind.None && hr == 0;
-        // Transparent window lets the backdrop show; otherwise keep the theme's solid background
-        // (a transparent window with no working backdrop would render black).
+
+        // When glass is on: clear the WPF surface to transparent so the composited backdrop shows
+        // through (the glass frame is extended across the client area in XAML). When off: opaque
+        // clear + the theme's solid background, so it never renders black.
+        if (HwndSource.FromHwnd(hwnd)?.CompositionTarget is { } ct)
+            ct.BackgroundColor = enabled ? Colors.Transparent : Colors.Black;
+
         window.Background = enabled
             ? Brushes.Transparent
-            : (Application.Current?.Resources["Bg"] as Brush ?? Brushes.Black);
+            : (Application.Current?.Resources["Bg"] as Brush ?? Brushes.White);
     }
 }
