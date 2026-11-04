@@ -25,6 +25,9 @@ public partial class WebLoginWindow : Window
     private (string User, string Pass)? _credentials;
     private readonly bool _autoSubmit;
     private readonly bool _abortOnChallenge;
+    private readonly string? _totpSecret;
+    private int _totpAttempts;
+    private DateTime _lastTotpAt;
     private bool _autofilled;
     private bool _submitted;
 
@@ -47,12 +50,14 @@ public partial class WebLoginWindow : Window
     /// <param name="autoSubmit">Fill AND click Log In (bulk). False = prefill only, user clicks (manual).</param>
     /// <param name="abortOnChallenge">Bulk auto only: detect and prompt for a verification challenge.</param>
     public WebLoginWindow(string? customUserAgent = null, (string User, string Pass)? credentials = null,
-                          string? progress = null, bool autoSubmit = true, bool abortOnChallenge = true)
+                          string? progress = null, bool autoSubmit = true, bool abortOnChallenge = true,
+                          string? totpSecret = null)
     {
         _customUserAgent = customUserAgent;
         _credentials = credentials;
         _autoSubmit = autoSubmit;
         _abortOnChallenge = abortOnChallenge;
+        _totpSecret = Totp.IsValidSecret(totpSecret) ? totpSecret : null;
         InitializeComponent();
         if (credentials is { } c)
         {
@@ -259,8 +264,45 @@ public partial class WebLoginWindow : Window
         var json = await Browser.CoreWebView2.ExecuteScriptAsync(probe);
         if (json.Trim() != "1" || _captured) return;
 
+        // If we hold the account's authenticator seed, answer the 2-step code automatically.
+        if (_totpSecret is { } secret && _totpAttempts < 3 && (DateTime.UtcNow - _lastTotpAt).TotalSeconds > 6)
+        {
+            _totpAttempts++;
+            _lastTotpAt = DateTime.UtcNow;
+            StatusText.Text = $"Entering 2-step code automatically (attempt {_totpAttempts})…";
+            await FillTotpAsync(secret);
+            return; // let the next poll see whether sign-in completed
+        }
+
         NeedsManual = true;
-        StatusText.Text = "Complete the verification in this window. The account will be saved when sign-in finishes.";
+        StatusText.Text = _totpSecret is null
+            ? "Complete the verification in this window. The account will be saved when sign-in finishes."
+            : "Couldn't complete 2-step automatically — finish it in this window.";
+    }
+
+    /// <summary>Best-effort: types a fresh TOTP code into the 2-step field and clicks the confirm button.</summary>
+    private async Task FillTotpAsync(string secret)
+    {
+        string code;
+        try { code = Totp.Generate(secret); }
+        catch { return; }
+
+        var js = $$"""
+            (function (code) {
+              const inp = document.querySelector('input[autocomplete=one-time-code],input[type=tel],input[type=number],input[type=text]');
+              if (!inp) return;
+              const set = (el, v) => {
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, v);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+              };
+              set(inp, code);
+              const btn = [...document.querySelectorAll('button')]
+                .find(b => /verify|submit|continue|confirm|next/i.test(b.textContent || ''));
+              if (btn) setTimeout(() => btn.click(), 250);
+            })({{JsonSerializer.Serialize(code)}});
+            """;
+        await Browser.CoreWebView2.ExecuteScriptAsync(js);
     }
 
     /// <summary>Deletes only the auth cookie(s) locally. Does NOT hit /logout.</summary>

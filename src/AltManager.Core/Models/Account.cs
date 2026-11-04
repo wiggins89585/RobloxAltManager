@@ -33,6 +33,8 @@ public sealed class Account
     public string EncryptedCookie { get; set; } = "";
     /// <summary>Encrypted like the cookie; empty when the password was never seen (cookie imports).</summary>
     public string EncryptedPassword { get; set; } = "";
+    /// <summary>Encrypted authenticator (TOTP) seed, for answering 2-step verification. Empty = none.</summary>
+    public string EncryptedTotpSecret { get; set; } = "";
     /// <summary>Per-account game ID. Empty = use the Launch panel's game; older saved game links remain readable.</summary>
     public string GameOverride { get; set; } = "";
     public string Notes { get; set; } = "";

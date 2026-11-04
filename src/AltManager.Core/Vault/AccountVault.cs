@@ -156,6 +156,24 @@ public sealed class AccountVault : IDisposable
         finally { CryptographicOperations.ZeroMemory(pt); }
     }
 
+    private static byte[] TotpContext(Account a) => a.Id.ToByteArray().Concat("totp"u8.ToArray()).ToArray();
+
+    public string? GetTotpSecret(Account account)
+    {
+        if (string.IsNullOrEmpty(account.EncryptedTotpSecret)) return null;
+        var pt = _cipher.Decrypt(Convert.FromBase64String(account.EncryptedTotpSecret), TotpContext(account));
+        try { return Encoding.UTF8.GetString(pt); }
+        finally { CryptographicOperations.ZeroMemory(pt); }
+    }
+
+    public void SetTotpSecret(Account account, string? secret)
+    {
+        if (string.IsNullOrWhiteSpace(secret)) { account.EncryptedTotpSecret = ""; return; }
+        var pt = Encoding.UTF8.GetBytes(secret.Trim());
+        try { account.EncryptedTotpSecret = Convert.ToBase64String(_cipher.Encrypt(pt, TotpContext(account))); }
+        finally { CryptographicOperations.ZeroMemory(pt); }
+    }
+
     private sealed class VaultFile
     {
         public int Version { get; set; } = 1;

@@ -21,6 +21,8 @@
             <TextBox x:Name="Interval" Width="48" Margin="8,0,6,0"/>
             <TextBlock Text="minutes (0 = off)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
         </StackPanel>
+        <CheckBox x:Name="AutoRejoin" Content="Auto-rejoin: relaunch a client into its game if it closes unexpectedly"
+                  Margin="0,8,0,0" Foreground="{StaticResource Fg}"/>
 
         <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
 

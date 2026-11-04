@@ -38,6 +38,8 @@ public sealed class AppSettings
     // Account health
     public bool AutoValidateOnStartup { get; set; }
     public int AutoValidateIntervalMinutes { get; set; }   // 0 = off
+    /// <summary>Relaunch a client back into its game if it closes unexpectedly (not when you close it).</summary>
+    public bool AutoRejoin { get; set; }
 
     // Privacy
     public bool StreamerMode { get; set; }

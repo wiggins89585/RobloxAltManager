@@ -101,6 +101,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (row is not null) ActiveProcesses.Remove(row);
             SetPid(p.AccountId, null);
             PersistWindowBounds(p.AccountId);
+            if (_userClosed.Remove(p.AccountId)) { /* closed on purpose — don't rejoin */ }
+            else MaybeRejoin(p.AccountId);
         });
         _boundsPoll.Interval = TimeSpan.FromSeconds(3);
         _boundsPoll.Tick += (_, _) =>
@@ -585,7 +587,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 cookie = _dialogs.BrowserLogin(ua); // no saved password: plain login window
             else
             {
-                var r = _dialogs.BulkBrowserLogin(ua, t.Model.Username, pass, "");
+                var r = _dialogs.BulkBrowserLogin(ua, t.Model.Username, pass, "", _vault.GetTotpSecret(t.Model));
                 cookie = r.Cookie;
             }
             if (cookie is null) continue; // cancelled this one; move on
@@ -652,6 +654,59 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (recipients.Count == 0) { StatusMessage = "Select the accounts to pay first."; return; }
         _dialogs.OpenGroupPayout(Accounts.ToList(), recipients, _api,
             a => { try { return _vault.GetCookie(a.Model); } catch { return null; } });
+    }
+
+    [RelayCommand]
+    private async Task SetTotpSecretAsync(AccountViewModel? vm)
+    {
+        if (vm is null) return;
+        var current = _vault.GetTotpSecret(vm.Model);
+        var input = _dialogs.Prompt("2FA secret",
+            $"Authenticator setup key for {vm.Label} (the base32 secret from the QR code). Blank to remove:", current ?? "");
+        if (input is null) return;
+        if (input.Length > 0 && !Totp.IsValidSecret(input))
+        {
+            _dialogs.Error("That doesn't look like a valid base32 authenticator key.");
+            return;
+        }
+        _vault.SetTotpSecret(vm.Model, input.Length == 0 ? null : input);
+        await _vault.SaveAsync();
+        vm.RefreshInfo();
+        StatusMessage = input.Length == 0 ? $"Removed 2FA secret for {vm.Label}." : $"Saved 2FA secret for {vm.Label}.";
+    }
+
+    [RelayCommand]
+    private void CopyTotpCode(AccountViewModel? vm)
+    {
+        if (vm is null) return;
+        var secret = _vault.GetTotpSecret(vm.Model);
+        if (secret is null) { StatusMessage = $"No 2FA secret saved for {vm.Label}."; return; }
+        try { Copy(Totp.Generate(secret), "2FA code"); }
+        catch { StatusMessage = "That saved 2FA secret is invalid."; }
+    }
+
+    [RelayCommand]
+    private async Task RedeemPromoAsync(AccountViewModel? vm)
+    {
+        var targets = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
+        if (targets.Count == 0) { StatusMessage = "Select accounts first."; return; }
+        var code = _dialogs.Prompt("Redeem promo code", $"Promo code for {targets.Count} account(s):");
+        if (string.IsNullOrWhiteSpace(code)) return;
+
+        int ok = 0;
+        var failed = new List<string>();
+        for (var i = 0; i < targets.Count; i++)
+        {
+            var t = targets[i];
+            StatusMessage = $"Redeeming {i + 1}/{targets.Count}: {t.Label}…";
+            string cookie;
+            try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); continue; }
+            var (okr, msg) = await _api.RedeemPromoCodeAsync(code, cookie);
+            if (okr) ok++; else failed.Add($"{t.Label} ({msg})");
+            if (targets.Count > 1) await Task.Delay(400);
+        }
+        StatusMessage = $"Promo '{code}': {ok}/{targets.Count} redeemed.";
+        if (failed.Count > 0) _dialogs.Error($"Redeemed {ok}/{targets.Count}.\n\nFailed:\n" + string.Join("\n", failed));
     }
 
     [RelayCommand]
@@ -935,6 +990,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         RecordGameHistory(targets.Values.Select(t => t.PlaceId));
 
+        // Remember each account's target and treat this as intentional, so auto-rejoin applies on a later crash.
+        foreach (var kv in targets) { _lastTarget[kv.Key] = kv.Value; _userClosed.Remove(kv.Key); }
+
         IsLaunching = true;
         _launchCts = new CancellationTokenSource();
         var progress = new Progress<LaunchProgress>(p =>
@@ -1015,22 +1073,58 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void KillProcess(TrackedProcess? p)
     {
-        if (p is not null) _tracker.Kill(p.Pid);
+        if (p is null) return;
+        _userClosed.Add(p.AccountId);  // intentional close → no auto-rejoin
+        _tracker.Kill(p.Pid);
     }
 
     [RelayCommand]
     private void KillAll()
     {
         if (ActiveProcesses.Count == 0 || !_dialogs.Confirm($"Close all {ActiveProcesses.Count} tracked clients?")) return;
-        foreach (var p in ActiveProcesses.ToList()) _tracker.Kill(p.Pid);
+        foreach (var p in ActiveProcesses.ToList()) { _userClosed.Add(p.AccountId); _tracker.Kill(p.Pid); }
     }
 
     /// <summary>Panic hotkey: close every tracked client at once, no confirm.</summary>
     [RelayCommand]
     private void PanicClose()
     {
-        foreach (var p in ActiveProcesses.ToList()) _tracker.Kill(p.Pid);
+        foreach (var p in ActiveProcesses.ToList()) { _userClosed.Add(p.AccountId); _tracker.Kill(p.Pid); }
         StatusMessage = "Panic close: all clients killed.";
+    }
+
+    // ---------------- Auto-rejoin watchdog ----------------
+
+    private readonly Dictionary<Guid, LaunchTarget> _lastTarget = new();
+    private readonly HashSet<Guid> _userClosed = new();
+    private readonly Dictionary<Guid, (int Count, DateTime Since)> _rejoinBudget = new();
+
+    private void MaybeRejoin(Guid accountId)
+    {
+        if (!_settings.AutoRejoin || !_lastTarget.TryGetValue(accountId, out var target)) return;
+        var vm = Accounts.FirstOrDefault(a => a.Model.Id == accountId);
+        if (vm is null) return;
+
+        // At most 3 rejoins in a 5-minute window, so a crash-loop doesn't spin forever.
+        var now = DateTime.UtcNow;
+        var b = _rejoinBudget.TryGetValue(accountId, out var x) ? x : (Count: 0, Since: now);
+        if ((now - b.Since).TotalMinutes > 5) b = (0, now);
+        if (b.Count >= 3) { StatusMessage = $"{vm.Label}: auto-rejoin paused (too many restarts)."; return; }
+        _rejoinBudget[accountId] = (b.Count + 1, b.Since);
+        _ = RejoinAsync(vm, target);
+    }
+
+    private async Task RejoinAsync(AccountViewModel vm, LaunchTarget target)
+    {
+        StatusMessage = $"Auto-rejoin: {vm.Label} in 5s…";
+        await Task.Delay(5000);
+        if (!_settings.AutoRejoin || _tracker.IsRunning(vm.Model.Id)) return;
+        var progress = new Progress<LaunchProgress>(pr =>
+        {
+            var v = Accounts.FirstOrDefault(a => a.Model.Id == pr.Account.Id);
+            if (v is not null) v.LaunchState = pr.Stage.ToString();
+        });
+        try { await _engine.LaunchAsync(vm.Model, target, new LaunchOptions(), progress); } catch { /* best effort */ }
     }
 
     // ---------------- Helpers ----------------

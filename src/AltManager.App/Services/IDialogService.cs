@@ -13,7 +13,7 @@ public interface IDialogService
     string? BrowserLogin(string? customUserAgent);
     (IReadOnlyList<(string User, string Pass)> Credentials, string Group, int DelaySeconds)? BulkLoginInput(IEnumerable<string> groups);
     /// <summary>Bulk browser login: fills + submits automatically; keeps the window open for verification challenges.</summary>
-    BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress);
+    BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress, string? totpSecret = null);
     /// <summary>Manual browser login: fields pre-filled but the user clicks Log In and enters any code.</summary>
     string? BrowserLoginManual(string? customUserAgent, string username, string password, string progress);
     bool Confirm(string message);
@@ -59,9 +59,9 @@ public sealed class DialogService : IDialogService
         return w.ShowDialog() == true ? (w.Credentials, w.Group, w.DelaySeconds) : null;
     }
 
-    public BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress)
+    public BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress, string? totpSecret = null)
     {
-        var w = new WebLoginWindow(customUserAgent, (username, password), progress) { Owner = Owner };
+        var w = new WebLoginWindow(customUserAgent, (username, password), progress, totpSecret: totpSecret) { Owner = Owner };
         w.ShowDialog();
         return new BrowserLoginResult(w.CapturedCookie, w.NeedsManual);
     }

@@ -288,6 +288,37 @@ public sealed class RobloxApiClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { return null; }
     }
 
+    /// <summary>Redeems a promo code for the account. Returns Roblox's result message.</summary>
+    public async Task<(bool Ok, string Message)> RedeemPromoCodeAsync(string code, string cookie, CancellationToken ct = default)
+    {
+        var c = code.Trim();
+        if (c.Length == 0) return (false, "empty code");
+        try
+        {
+            using var res = await SendWithCsrfAsync(() =>
+            {
+                var r = Build(HttpMethod.Post, "https://apis.roblox.com/promotion-codes/v1/redeem", cookie);
+                r.Content = JsonContent.Create(new { code = c });
+                return r;
+            }, cookie, ct);
+            var body = await res.Content.ReadAsStringAsync(ct);
+            if (res.IsSuccessStatusCode) return (true, "redeemed");
+            return (false, ExtractError(body) ?? ExtractMessage(body) ?? $"HTTP {(int)res.StatusCode}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
+    }
+
+    private static string? ExtractMessage(string body)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("message", out var m)) return m.GetString();
+        }
+        catch (System.Text.Json.JsonException) { }
+        return null;
+    }
+
     // ---------- Groups ----------
 
     /// <summary>Joins a Roblox group with the given account. Approval-only groups return a message instead.</summary>

@@ -67,6 +67,15 @@
             <MenuItem Header="💸  Give group Robux…" CommandParameter="{Binding}"
                       ToolTip="Pay Robux from a group you own to the selected accounts"
                       Command="{Binding PlacementTarget.Tag.GroupPayoutCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="🎁  Redeem promo code…" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.RedeemPromoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <Separator/>
+            <TextBlock Text="2-STEP VERIFICATION" Style="{StaticResource MenuHeader}"/>
+            <MenuItem Header="🔐  Set 2FA secret…" CommandParameter="{Binding}"
+                      ToolTip="Store the authenticator key so logins answer 2-step automatically"
+                      Command="{Binding PlacementTarget.Tag.SetTotpSecretCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Copy 2FA code" CommandParameter="{Binding}" IsEnabled="{Binding HasTotp}"
+                      Command="{Binding PlacementTarget.Tag.CopyTotpCodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
     </Window.Resources>
 

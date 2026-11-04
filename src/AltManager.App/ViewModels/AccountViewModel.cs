@@ -87,6 +87,7 @@ public partial class AccountViewModel : ObservableObject
     public string GameLabel => string.IsNullOrWhiteSpace(Model.GameOverride) ? "Default game" : Model.GameOverride;
 
     public bool HasPassword => !string.IsNullOrEmpty(Model.EncryptedPassword);
+    public bool HasTotp => !string.IsNullOrEmpty(Model.EncryptedTotpSecret);
 
     // ---- Cached account info (Refresh info) ----
     public string RobuxText => Model.Robux is { } r ? r.ToString("N0") : "—";
@@ -108,6 +109,7 @@ public partial class AccountViewModel : ObservableObject
         OnPropertyChanged(nameof(PremiumText));
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(AgeText));
+        OnPropertyChanged(nameof(HasTotp));
     }
 
     public AccountStatus Status
