@@ -31,6 +31,8 @@ public interface IDialogService
     void OpenGroupPayout(IReadOnlyList<ViewModels.AccountViewModel> allAccounts,
                          IReadOnlyList<ViewModels.AccountViewModel> recipients,
                          RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie);
+    /// <summary>Opens the server browser for a place; onJoin gets the chosen job ID.</summary>
+    void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin);
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
@@ -121,6 +123,9 @@ public sealed class DialogService : IDialogService
                                 IReadOnlyList<ViewModels.AccountViewModel> recipients,
                                 RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie) =>
         new GroupPayoutWindow(allAccounts, recipients, api, getCookie) { Owner = Owner }.ShowDialog();
+
+    public void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin) =>
+        new ServerBrowserWindow(placeId, api, onJoin) { Owner = Owner }.Show();
 
     private static System.Windows.Media.Brush Brush(string hex) =>
         (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;

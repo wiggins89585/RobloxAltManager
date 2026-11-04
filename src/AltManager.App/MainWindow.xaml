@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:AltManager.App.ViewModels"
         xmlns:core="clr-namespace:AltManager.Core.Launch;assembly=AltManager.Core"
-        Title="Roblox Alt Manager" Width="920" Height="500" MinWidth="820" MinHeight="420"
+        Title="Roblox Alt Manager" Width="1080" Height="560" MinWidth="820" MinHeight="420"
         Icon="pack://application:,,,/Assets/RobloxAltManager.ico"
         Background="{StaticResource Bg}" Foreground="{StaticResource Fg}"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
@@ -307,6 +307,7 @@
                           CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
                           RowHeight="38" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource Line}"
                           SelectionMode="Extended" FontSize="12"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           Background="{StaticResource Panel}" RowBackground="{StaticResource Panel}"
                           Foreground="{StaticResource Fg}" BorderThickness="0">
                     <DataGrid.RowStyle>
@@ -355,7 +356,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="NOTE" Width="1*"
+                        <DataGridTextColumn Header="NOTE" Width="1*" MinWidth="110"
                                             Binding="{Binding Notes, UpdateSourceTrigger=LostFocus}">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
@@ -365,7 +366,7 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <DataGridTemplateColumn Header="GROUP" Width="110" SortMemberPath="Group">
+                        <DataGridTemplateColumn Header="GROUP" Width="110" MinWidth="100" SortMemberPath="Group">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <ComboBox IsEditable="True" VerticalAlignment="Center" FontSize="12"
@@ -375,7 +376,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="STATUS" Width="80" SortMemberPath="Status">
+                        <DataGridTemplateColumn Header="STATUS" Width="80" MinWidth="76" SortMemberPath="Status">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -387,10 +388,10 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="ROBUX" Width="70" IsReadOnly="True"
+                        <DataGridTextColumn Header="ROBUX" Width="66" MinWidth="60" IsReadOnly="True"
                                             Binding="{Binding RobuxText}" Foreground="{StaticResource Fg}"/>
 
-                        <DataGridTemplateColumn Header="PREM" Width="52" SortMemberPath="IsPremium">
+                        <DataGridTemplateColumn Header="PREM" Width="46" MinWidth="44" SortMemberPath="IsPremium">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <TextBlock Text="★" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -400,10 +401,10 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="AGE" Width="50" IsReadOnly="True"
+                        <DataGridTextColumn Header="AGE" Width="48" MinWidth="44" IsReadOnly="True"
                                             Binding="{Binding AgeText}" Foreground="{StaticResource Muted}"/>
 
-                        <DataGridTextColumn Header="GAME ID" Width="1.2*"
+                        <DataGridTextColumn Header="GAME" Width="1*" MinWidth="110"
                                             Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
@@ -441,7 +442,13 @@
                                        TextTrimming="CharacterEllipsis"
                                        ToolTip="Place ID, game URL, or private-server / share link"/>
                             <TextBox Text="{Binding PlaceInput, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Job ID (specific server, optional)" Style="{StaticResource Label}"/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Servers…" Margin="6,0,0,0"
+                                        Command="{Binding OpenServerBrowserCommand}"
+                                        ToolTip="Browse this game's servers and join a specific one"/>
+                                <TextBlock Text="Job ID (specific server, optional)" Style="{StaticResource Label}"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
                             <TextBox Text="{Binding JobId, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBlock Style="{StaticResource Label}">
                                 <Run Text="Stagger delay:"/> <Run Text="{Binding StaggerSeconds, StringFormat={}{0:0} s, Mode=OneWay}"/>

@@ -247,6 +247,27 @@ public sealed class RobloxApiClient : IDisposable
         return result;
     }
 
+    /// <summary>Lists public servers for a place (one page). Returns servers + the next-page cursor.</summary>
+    public async Task<(List<ServerInfo> Servers, string? NextCursor)> GetServersAsync(
+        long placeId, string? cursor = null, CancellationToken ct = default)
+    {
+        var url = $"https://games.roblox.com/v1/games/{placeId}/servers/Public?sortOrder=Asc&limit=100" +
+                  (string.IsNullOrEmpty(cursor) ? "" : $"&cursor={Uri.EscapeDataString(cursor)}");
+        try
+        {
+            var dto = await _http.GetFromJsonAsync<ServerPage>(url, ct);
+            var servers = (dto?.Data ?? new())
+                .Where(s => s.Id is not null)
+                .Select(s => new ServerInfo(s.Id!, s.Playing ?? 0, s.MaxPlayers ?? 0, s.Fps, s.Ping))
+                .ToList();
+            return (servers, dto?.NextPageCursor);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            return (new(), null);
+        }
+    }
+
     // ---------- Account info ----------
 
     /// <summary>The account's own Robux balance (its own cookie).</summary>
@@ -498,6 +519,16 @@ public sealed class RobloxApiClient : IDisposable
         [property: JsonPropertyName("rootPlaceId")] long? RootPlaceId,
         [property: JsonPropertyName("name")] string? Name,
         [property: JsonPropertyName("playerCount")] long? PlayerCount);
+
+    private sealed record ServerPage(
+        [property: JsonPropertyName("nextPageCursor")] string? NextPageCursor,
+        [property: JsonPropertyName("data")] List<ServerDto>? Data);
+    private sealed record ServerDto(
+        [property: JsonPropertyName("id")] string? Id,
+        [property: JsonPropertyName("maxPlayers")] int? MaxPlayers,
+        [property: JsonPropertyName("playing")] int? Playing,
+        [property: JsonPropertyName("fps")] double? Fps,
+        [property: JsonPropertyName("ping")] int? Ping);
 
     private sealed record CurrencyDto([property: JsonPropertyName("robux")] long Robux);
     private sealed record UserInfoDto([property: JsonPropertyName("created")] DateTimeOffset? Created);

@@ -86,3 +86,6 @@ public sealed record UserPresence(long UserId, PresenceType Type, string? LastLo
 
 /// <summary>A game returned by Roblox search.</summary>
 public sealed record GameSearchResult(long PlaceId, string Name, int? Players);
+
+/// <summary>A public game server (job).</summary>
+public sealed record ServerInfo(string Id, int Playing, int MaxPlayers, double? Fps, int? Ping);

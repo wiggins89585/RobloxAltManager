@@ -845,6 +845,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand] private void ShowList() => IsGridView = false;
     [RelayCommand] private void ShowGrid() => IsGridView = true;
 
+    [RelayCommand]
+    private void OpenServerBrowser()
+    {
+        if (LaunchTargetParser.Parse(PlaceInput).PlaceId is not { } placeId || placeId <= 0)
+        {
+            StatusMessage = "Enter a game / place ID in the Launch panel first.";
+            return;
+        }
+        _dialogs.OpenServerBrowser(placeId, _api, jobId =>
+        {
+            JobId = jobId;
+            if (Accounts.Any(a => a.IsSelected)) LaunchSelectedCommand.Execute(null);
+            else StatusMessage = $"Server set ({jobId}). Select accounts and press Launch.";
+        });
+    }
+
     // ---------------- Game history ----------------
 
     private void RecordGameHistory(IEnumerable<long> placeIds)
