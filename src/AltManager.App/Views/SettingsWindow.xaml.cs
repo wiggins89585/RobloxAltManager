@@ -33,6 +33,34 @@ public partial class SettingsWindow : Window
         ApiToken.Text = string.IsNullOrWhiteSpace(_s.LocalApiToken)
             ? Services.LocalApiServer.NewToken()
             : _s.LocalApiToken;
+
+        BuildAccentSwatches();
+        AccentHex.Text = string.IsNullOrWhiteSpace(_s.AccentColor) ? Services.Theme.DefaultAccent : _s.AccentColor;
+        AccentHex.TextChanged += (_, _) => UpdateAccentPreview();
+        UpdateAccentPreview();
+    }
+
+    private void BuildAccentSwatches()
+    {
+        foreach (var (name, hex) in Services.Theme.Presets)
+        {
+            if (!Services.Theme.TryParseColor(hex, out var c)) continue;
+            var btn = new System.Windows.Controls.Button
+            {
+                Width = 22, Height = 22, Margin = new Thickness(0, 0, 6, 6),
+                Background = new System.Windows.Media.SolidColorBrush(c),
+                BorderThickness = new Thickness(0), Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = $"{name} ({hex})", Tag = hex
+            };
+            btn.Click += (s, _) => AccentHex.Text = (string)((System.Windows.Controls.Button)s!).Tag;
+            AccentSwatches.Children.Add(btn);
+        }
+    }
+
+    private void UpdateAccentPreview()
+    {
+        if (Services.Theme.TryParseColor(AccentHex.Text, out var c))
+            AccentPreview.Background = new System.Windows.Media.SolidColorBrush(c);
     }
 
     private void CopyToken_Click(object sender, RoutedEventArgs e)
@@ -73,6 +101,9 @@ public partial class SettingsWindow : Window
         _s.LocalApiEnabled = ApiEnabled.IsChecked == true;
         _s.LocalApiPort = ParseClamp(ApiPort.Text, 7963, 1024, 65535);
         _s.LocalApiToken = ApiToken.Text.Trim();
+        _s.AccentColor = Services.Theme.TryParseColor(AccentHex.Text, out _)
+            ? AccentHex.Text.Trim()
+            : Services.Theme.DefaultAccent;
         _s.Save();
         DialogResult = true;
     }

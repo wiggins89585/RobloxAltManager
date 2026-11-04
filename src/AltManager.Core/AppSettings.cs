@@ -74,6 +74,9 @@ public sealed class AppSettings
     // Browser
     public string CustomUserAgent { get; set; } = "";
 
+    // Theme
+    public string AccentColor { get; set; } = "#5865F2";
+
     // Local automation API (opt-in; binds to 127.0.0.1 only, bearer-token protected)
     public bool LocalApiEnabled { get; set; }
     public int LocalApiPort { get; set; } = 7963;

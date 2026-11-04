@@ -114,28 +114,6 @@
                     <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>
                 </StackPanel>
 
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Games you've launched (click one to reuse it)"/>
-                    <Button Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Activity log / notifications">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Log"/>
-                            <TextBlock Text=" ●" Foreground="#F23F43"
-                                       Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Content="Schedules" Command="{Binding OpenSchedulesCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Scheduled launches"/>
-                    <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Mask or show usernames and IDs"/>
-                    <Button Content="Lock" Command="{Binding LockCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Lock the app (Ctrl+L)"/>
-                    <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Open settings"/>
-                </StackPanel>
-
                 <Image Source="/Assets/RobloxAltManager.png" Width="32" Height="32" Margin="6,0,0,0"
                        Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"/>
@@ -146,20 +124,42 @@
             </DockPanel>
         </Border>
 
-        <!-- ================= Account actions toolbar ================= -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Padding="8,0,8,5">
-            <StackPanel Orientation="Horizontal">
-                <Button Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
+        <!-- ================= Actions toolbar (account actions left · app tools right) ================= -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Padding="8,2,8,6"
+                BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="False">
+                <!-- Account actions -->
+                <Button DockPanel.Dock="Left" Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
                         ToolTip="Import .ROBLOSECURITY cookies"/>
-                <Button Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
+                <Button DockPanel.Dock="Left" Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
                         ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                <Button Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
+                <Button DockPanel.Dock="Left" Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
                         ToolTip="Log in several accounts from a user:pass,user:pass list"/>
-                <Button Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
+                <Button DockPanel.Dock="Left" Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
                         ToolTip="Re-check every account's cookie"/>
-                <Button Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
+                <Button DockPanel.Dock="Left" Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
                         ToolTip="Remove the selected accounts"/>
-            </StackPanel>
+
+                <!-- App tools (docked right; declared right-to-left so Settings sits at the far right) -->
+                <Button DockPanel.Dock="Right" Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
+                        Margin="0" ToolTip="Open settings"/>
+                <Button DockPanel.Dock="Right" Content="Lock" Command="{Binding LockCommand}" Style="{StaticResource ToolbarButton}"
+                        ToolTip="Lock the app (Ctrl+L)"/>
+                <Button DockPanel.Dock="Right" Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
+                        ToolTip="Mask or show usernames and IDs"/>
+                <Button DockPanel.Dock="Right" Content="Schedules" Command="{Binding OpenSchedulesCommand}" Style="{StaticResource ToolbarButton}"
+                        ToolTip="Scheduled launches"/>
+                <Button DockPanel.Dock="Right" Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
+                        ToolTip="Activity log / notifications">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Log"/>
+                        <TextBlock Text=" ●" Foreground="#F23F43"
+                                   Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
+                    </StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Right" Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
+                        ToolTip="Games you've launched (click one to reuse it)"/>
+            </DockPanel>
         </Border>
 
         <!-- ================= Status bar (hidden when idle) ================= -->

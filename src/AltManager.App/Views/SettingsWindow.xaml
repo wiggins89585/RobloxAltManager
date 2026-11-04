@@ -48,6 +48,19 @@
 
         <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
 
+        <TextBlock Text="THEME" Style="{StaticResource Heading}"/>
+        <TextBlock Text="Accent colour (used for highlights, buttons and selection). Applies instantly."
+                   Style="{StaticResource Label}" TextWrapping="Wrap"/>
+        <WrapPanel x:Name="AccentSwatches" Margin="0,8,0,6"/>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Hex" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+            <TextBox x:Name="AccentHex" Width="92" Margin="8,0,8,0" MaxLength="9"/>
+            <Border x:Name="AccentPreview" Width="24" Height="24" CornerRadius="4"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1"/>
+        </StackPanel>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
         <TextBlock Text="VIEW" Style="{StaticResource Heading}"/>
         <CheckBox x:Name="RememberView" Content="Remember view, group and window size between sessions"
                   Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
