@@ -544,13 +544,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public async Task LoadAvatarsAsync(IEnumerable<long> ids)
     {
-        try
+        // Roblox returns "Pending" while it renders a headshot; retry the still-missing ones a few times.
+        var missing = ids.Where(id => id > 0).Distinct().ToList();
+        for (var attempt = 0; attempt < 4 && missing.Count > 0; attempt++)
         {
-            var map = await _api.GetHeadshotsAsync(ids);
+            Dictionary<long, string> map;
+            try { map = await _api.GetHeadshotsAsync(missing); }
+            catch (Exception ex) { StatusMessage = "Avatar fetch failed: " + ex.Message; return; }
+
             foreach (var vm in Accounts)
                 if (map.TryGetValue(vm.UserId, out var url)) vm.AvatarUrl = url;
+
+            missing = missing.Where(id => !map.ContainsKey(id)).ToList();
+            if (missing.Count > 0) await Task.Delay(1500);
         }
-        catch (Exception ex) { StatusMessage = "Avatar fetch failed: " + ex.Message; }
     }
 
     // ---------------- Per-account (right-click menu) ----------------

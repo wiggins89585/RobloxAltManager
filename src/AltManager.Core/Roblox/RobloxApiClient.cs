@@ -146,11 +146,18 @@ public sealed class RobloxApiClient : IDisposable
         {
             var url = "https://thumbnails.roblox.com/v1/users/avatar-headshot" +
                       $"?userIds={string.Join(',', chunk)}&size=150x150&format=Png&isCircular=false";
-            var dto = await _http.GetFromJsonAsync<ThumbResponse>(url, ct);
-            if (dto?.Data is null) continue;
-            foreach (var t in dto.Data)
-                if (t.State == "Completed" && t.ImageUrl is not null)
-                    result[t.TargetId] = t.ImageUrl;
+            try
+            {
+                var dto = await _http.GetFromJsonAsync<ThumbResponse>(url, ct);
+                if (dto?.Data is null) continue;
+                foreach (var t in dto.Data)
+                    if (t.State == "Completed" && t.ImageUrl is not null)
+                        result[t.TargetId] = t.ImageUrl;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+            {
+                // transient / rate-limit: leave these ids missing so the caller can retry
+            }
         }
         return result;
     }
