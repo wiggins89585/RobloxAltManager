@@ -18,9 +18,10 @@
 
     <Window.Resources>
         <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Padding" Value="6,2"/>
-            <Setter Property="Margin" Value="0,0,3,0"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="FontSize" Value="11"/>
+            <Setter Property="MinWidth" Value="52"/>
         </Style>
 
         <!-- Shared by list rows and grid cards. The host's Tag holds the MainViewModel (menus live outside the
@@ -140,20 +141,25 @@
                 <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"/>
                 <TextBlock x:Name="VersionText" FontSize="10" VerticalAlignment="Center" Margin="-10,0,12,0"
                            Foreground="{StaticResource Muted}"/>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
-                            ToolTip="Import .ROBLOSECURITY cookies"/>
-                    <Button Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
-                            ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                    <Button Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
-                            ToolTip="Log in several accounts from a user:pass,user:pass list"/>
-                    <Button Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
-                            ToolTip="Re-check every account's cookie"/>
-                    <Button Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
-                            ToolTip="Remove the selected accounts"/>
-                </StackPanel>
+                <!-- empty fill = draggable window area -->
+                <Border Background="Transparent"/>
             </DockPanel>
+        </Border>
+
+        <!-- ================= Account actions toolbar ================= -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Padding="8,0,8,5">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
+                        ToolTip="Import .ROBLOSECURITY cookies"/>
+                <Button Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
+                        ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
+                <Button Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
+                        ToolTip="Log in several accounts from a user:pass,user:pass list"/>
+                <Button Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
+                        ToolTip="Re-check every account's cookie"/>
+                <Button Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
+                        ToolTip="Remove the selected accounts"/>
+            </StackPanel>
         </Border>
 
         <!-- ================= Status bar (hidden when idle) ================= -->
@@ -349,7 +355,7 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Width="30">
+                        <DataGridTemplateColumn Width="32" MinWidth="32">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
@@ -358,10 +364,11 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="" Width="40">
+                        <DataGridTemplateColumn Header="" Width="44" MinWidth="44">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
-                                    <Grid Width="34" Height="34" ToolTip="{Binding PresenceText}">
+                                    <Grid Width="34" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          ToolTip="{Binding PresenceText}">
                                         <Ellipse Width="30" Height="30" Fill="{StaticResource Raised}"/>
                                         <Ellipse Width="30" Height="30">
                                             <Ellipse.Fill>
