@@ -40,6 +40,8 @@ public sealed class Account
     public string Notes { get; set; } = "";
     public List<string> Tags { get; set; } = new();
     public bool Favorite { get; set; }
+    /// <summary>Optional per-account proxy for this app's web-API calls (validation, launch auth, info). Empty = direct.</summary>
+    public string Proxy { get; set; } = "";
     /// <summary>Last game-client window position/size for this account; restored on the next launch.</summary>
     public SavedWindowBounds? WindowBounds { get; set; }
 

@@ -47,6 +47,19 @@ public partial class MainWindow : Window
         PreviewMouseMove += (_, _) => Vm?.ResetIdle();
         PreviewMouseDown += (_, _) => Vm?.ResetIdle();
         PreviewKeyDown += (_, _) => Vm?.ResetIdle();
+
+        // Persist window size automatically a moment after the user stops resizing.
+        _saveSize = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+        _saveSize.Tick += (_, _) => { _saveSize.Stop(); PersistSize(); };
+        SizeChanged += (_, _) => { _saveSize.Stop(); _saveSize.Start(); };
+    }
+
+    private readonly System.Windows.Threading.DispatcherTimer _saveSize;
+
+    private void PersistSize()
+    {
+        if (WindowState != WindowState.Normal) return; // keep the restore size, not the maximized one
+        Vm?.SaveViewState(ActualWidth, ActualHeight);
     }
 
     private AltManager.App.ViewModels.MainViewModel? Vm => DataContext as AltManager.App.ViewModels.MainViewModel;

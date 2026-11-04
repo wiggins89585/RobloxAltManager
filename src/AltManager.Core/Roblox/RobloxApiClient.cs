@@ -22,6 +22,10 @@ public sealed class RobloxApiClient : IDisposable
     private readonly HttpClient _http;
     private readonly ConcurrentDictionary<string, string> _csrf = new();
 
+    // Per-account proxies: cookie -> proxy string, and a lazily-built HttpClient per distinct proxy.
+    private readonly ConcurrentDictionary<string, string> _cookieProxy = new();
+    private readonly ConcurrentDictionary<string, HttpClient> _byProxy = new();
+
     /// <summary>Raised when Roblox issues a replacement .ROBLOSECURITY via Set-Cookie. Persist it!</summary>
     public event EventHandler<CookieRotatedEventArgs>? CookieRotated;
 
@@ -43,7 +47,7 @@ public sealed class RobloxApiClient : IDisposable
     public async Task<AuthenticatedUser?> GetAuthenticatedUserAsync(string cookie, CancellationToken ct = default)
     {
         using var req = Build(HttpMethod.Get, "https://users.roblox.com/v1/users/authenticated", cookie);
-        using var res = await _http.SendAsync(req, ct);
+        using var res = await Send(req, ct);
         CheckRotation(res, cookie);
 
         if (res.StatusCode == HttpStatusCode.Unauthorized) return null;
@@ -64,7 +68,7 @@ public sealed class RobloxApiClient : IDisposable
     {
         using var req = Build(HttpMethod.Get, "https://users.roblox.com/v1/users/authenticated", cookie);
         HttpResponseMessage res;
-        try { res = await _http.SendAsync(req, ct); }
+        try { res = await Send(req, ct); }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (AccountState.Error, null); }
 
         using (res)
@@ -88,7 +92,7 @@ public sealed class RobloxApiClient : IDisposable
         using var req = Build(HttpMethod.Get, "https://accountsettings.roblox.com/v1/email", cookie);
         try
         {
-            using var res = await _http.SendAsync(req, ct);
+            using var res = await Send(req, ct);
             CheckRotation(res, cookie);
             if (!res.IsSuccessStatusCode) return null;
             var dto = await res.Content.ReadFromJsonAsync<EmailDto>(cancellationToken: ct);
@@ -193,7 +197,7 @@ public sealed class RobloxApiClient : IDisposable
             using var req = Build(HttpMethod.Get, $"https://games.roblox.com/v1/games/multiget-place-details?{query}", cookie);
             try
             {
-                using var res = await _http.SendAsync(req, ct);
+                using var res = await Send(req, ct);
                 if (!res.IsSuccessStatusCode) continue;
                 var dto = await res.Content.ReadFromJsonAsync<List<PlaceDetailDto>>(cancellationToken: ct);
                 if (dto is null) continue;
@@ -283,7 +287,7 @@ public sealed class RobloxApiClient : IDisposable
         using var req = Build(HttpMethod.Get, "https://economy.roblox.com/v1/user/currency", cookie);
         try
         {
-            using var res = await _http.SendAsync(req, ct);
+            using var res = await Send(req, ct);
             if (!res.IsSuccessStatusCode) return null;
             var dto = await res.Content.ReadFromJsonAsync<CurrencyDto>(cancellationToken: ct);
             return dto?.Robux;
@@ -297,7 +301,7 @@ public sealed class RobloxApiClient : IDisposable
         using var req = Build(HttpMethod.Get, $"https://premiumfeatures.roblox.com/v1/users/{userId}/validate-membership", cookie);
         try
         {
-            using var res = await _http.SendAsync(req, ct);
+            using var res = await Send(req, ct);
             if (!res.IsSuccessStatusCode) return null;
             var body = await res.Content.ReadAsStringAsync(ct);
             return bool.TryParse(body.Trim(), out var b) ? b : null;
@@ -353,7 +357,7 @@ public sealed class RobloxApiClient : IDisposable
         using var req = Build(HttpMethod.Get, $"https://avatar.roblox.com/v1/users/{userId}/outfits?page=1&itemsPerPage=50", cookie);
         try
         {
-            using var res = await _http.SendAsync(req, ct);
+            using var res = await Send(req, ct);
             if (!res.IsSuccessStatusCode) return new();
             var dto = await res.Content.ReadFromJsonAsync<OutfitsResponse>(cancellationToken: ct);
             return (dto?.Data ?? new()).Where(o => o.Name is not null).Select(o => (o.Id, o.Name!)).ToList();
@@ -399,7 +403,7 @@ public sealed class RobloxApiClient : IDisposable
         using var req = Build(HttpMethod.Get, $"https://economy.roblox.com/v1/groups/{groupId}/currency", cookie);
         try
         {
-            using var res = await _http.SendAsync(req, ct);
+            using var res = await Send(req, ct);
             if (!res.IsSuccessStatusCode) return null;
             var dto = await res.Content.ReadFromJsonAsync<CurrencyDto>(cancellationToken: ct);
             return dto?.Robux;
@@ -475,6 +479,92 @@ public sealed class RobloxApiClient : IDisposable
         return req;
     }
 
+    // ---------- Per-account proxies ----------
+
+    /// <summary>
+    /// Routes this account's web-API traffic (validation, auth-ticket for launch, info lookups)
+    /// through <paramref name="proxy"/>. Blank clears it. Accepts host:port, host:port:user:pass,
+    /// or scheme://[user:pass@]host:port (http/https/socks5/socks4). The game client process itself
+    /// is not proxied — only the authenticated web calls this app makes on the account's behalf.
+    /// </summary>
+    public void SetProxy(string cookie, string? proxy)
+    {
+        if (string.IsNullOrWhiteSpace(cookie)) return;
+        if (string.IsNullOrWhiteSpace(proxy)) _cookieProxy.TryRemove(cookie, out _);
+        else _cookieProxy[cookie] = proxy.Trim();
+    }
+
+    /// <summary>True if <paramref name="proxy"/> parses to a usable proxy (blank is allowed = no proxy).</summary>
+    public static bool IsValidProxy(string? proxy) =>
+        string.IsNullOrWhiteSpace(proxy) || BuildProxy(proxy) is not null;
+
+    /// <summary>Sends a request through the account's proxy client when one is set, else the default client.</summary>
+    private Task<HttpResponseMessage> Send(HttpRequestMessage req, CancellationToken ct) =>
+        ClientFor(req).SendAsync(req, ct);
+
+    private HttpClient ClientFor(HttpRequestMessage req)
+    {
+        if (_cookieProxy.IsEmpty) return _http;
+        if (!req.Headers.TryGetValues("Cookie", out var cookies)) return _http;
+        var prefix = RobloxCookie.Name + "=";
+        foreach (var c in cookies)
+            if (c.StartsWith(prefix, StringComparison.Ordinal) &&
+                _cookieProxy.TryGetValue(c[prefix.Length..], out var proxy))
+                return _byProxy.GetOrAdd(proxy, CreateProxyClient);
+        return _http;
+    }
+
+    private static HttpClient CreateProxyClient(string proxy)
+    {
+        var handler = new SocketsHttpHandler
+        {
+            UseCookies = false,
+            AutomaticDecompression = DecompressionMethods.All,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        };
+        if (BuildProxy(proxy) is { } wp) { handler.Proxy = wp; handler.UseProxy = true; }
+        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("AltManager/1.0");
+        return client;
+    }
+
+    /// <summary>Parses a proxy string into a <see cref="WebProxy"/>, or null if it is unusable.</summary>
+    private static WebProxy? BuildProxy(string proxy)
+    {
+        try
+        {
+            var s = proxy.Trim();
+            if (s.Length == 0) return null;
+
+            var scheme = "http";
+            var schemeIdx = s.IndexOf("://", StringComparison.Ordinal);
+            if (schemeIdx >= 0) { scheme = s[..schemeIdx].ToLowerInvariant(); s = s[(schemeIdx + 3)..]; }
+
+            string? user = null, pass = null, hostPort;
+            var at = s.LastIndexOf('@');
+            if (at >= 0)
+            {
+                var creds = s[..at].Split(':', 2);
+                user = creds[0];
+                pass = creds.Length > 1 ? creds[1] : "";
+                hostPort = s[(at + 1)..];
+            }
+            else
+            {
+                // host:port  or  host:port:user:pass
+                var parts = s.Split(':');
+                if (parts.Length == 4) { hostPort = parts[0] + ":" + parts[1]; user = parts[2]; pass = parts[3]; }
+                else hostPort = s;
+            }
+
+            if (!hostPort.Contains(':')) return null; // need host:port
+            var wp = new WebProxy($"{scheme}://{hostPort}");
+            if (user is not null) wp.Credentials = new NetworkCredential(user, pass ?? "");
+            return wp;
+        }
+        catch { return null; }
+    }
+
     /// <summary>Roblox returns 403 + x-csrf-token on the first mutating call; retry once with it.</summary>
     private async Task<HttpResponseMessage> SendWithCsrfAsync(Func<HttpRequestMessage> factory, string cookie, CancellationToken ct)
     {
@@ -484,7 +574,7 @@ public sealed class RobloxApiClient : IDisposable
             if (_csrf.TryGetValue(cookie, out var token))
                 req.Headers.TryAddWithoutValidation("x-csrf-token", token);
 
-            var res = await _http.SendAsync(req, ct);
+            var res = await Send(req, ct);
             req.Dispose();
             CheckRotation(res, cookie);
 
@@ -511,12 +601,17 @@ public sealed class RobloxApiClient : IDisposable
             if (value.Length > 0 && value != oldCookie)
             {
                 if (_csrf.TryRemove(oldCookie, out var tok)) _csrf[value] = tok;
+                if (_cookieProxy.TryRemove(oldCookie, out var px)) _cookieProxy[value] = px;
                 CookieRotated?.Invoke(this, new CookieRotatedEventArgs(oldCookie, value));
             }
         }
     }
 
-    public void Dispose() => _http.Dispose();
+    public void Dispose()
+    {
+        _http.Dispose();
+        foreach (var c in _byProxy.Values) c.Dispose();
+    }
 
     private sealed record UserDto(
         [property: JsonPropertyName("id")] long Id,

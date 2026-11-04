@@ -81,6 +81,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         AccountViewModel.Masked = settings.StreamerMode;
 
         foreach (var a in vault.Accounts) Add(a);
+        RegisterProxies();
         foreach (var p in settings.Presets) Presets.Add(p.Name);
 
         AccountsView = CollectionViewSource.GetDefaultView(Accounts);
@@ -852,6 +853,45 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         foreach (var a in targets) a.Group = group;
         await _vault.SaveAsync();
         RebuildGroups();
+    }
+
+    [RelayCommand]
+    private async Task SetProxyForSelectedAsync(AccountViewModel? vm)
+    {
+        var targets = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
+        if (targets.Count == 0) { StatusMessage = "Select accounts first."; return; }
+
+        var proxy = _dialogs.Prompt("Set proxy",
+            $"Proxy for {targets.Count} account(s) — host:port, host:port:user:pass, or scheme://... (blank = none):",
+            targets[0].Model.Proxy);
+        if (proxy is null) return; // cancelled (blank string clears it)
+        proxy = proxy.Trim();
+        if (!RobloxApiClient.IsValidProxy(proxy))
+        {
+            _dialogs.Error("That proxy didn't parse. Use host:port, host:port:user:pass, or scheme://[user:pass@]host:port.");
+            return;
+        }
+
+        foreach (var a in targets)
+        {
+            a.Model.Proxy = proxy;
+            try { _api.SetProxy(_vault.GetCookie(a.Model), proxy); } catch { /* cookie not available yet */ }
+            a.RefreshProxy();
+        }
+        await _vault.SaveAsync();
+        StatusMessage = proxy.Length == 0
+            ? $"Cleared proxy on {targets.Count} account(s)."
+            : $"Proxy set on {targets.Count} account(s). Applies to web-API calls (validation / launch auth), not the game client.";
+    }
+
+    /// <summary>Registers every account's saved proxy with the API client at startup.</summary>
+    private void RegisterProxies()
+    {
+        foreach (var a in Accounts)
+        {
+            if (string.IsNullOrWhiteSpace(a.Model.Proxy)) continue;
+            try { _api.SetProxy(_vault.GetCookie(a.Model), a.Model.Proxy); } catch { /* best effort */ }
+        }
     }
 
     private void Copy(string text, string what)

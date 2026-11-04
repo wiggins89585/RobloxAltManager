@@ -100,6 +100,8 @@ public partial class AccountViewModel : ObservableObject
 
     public bool HasPassword => !string.IsNullOrEmpty(Model.EncryptedPassword);
     public bool HasTotp => !string.IsNullOrEmpty(Model.EncryptedTotpSecret);
+    public bool HasProxy => !string.IsNullOrWhiteSpace(Model.Proxy);
+    public void RefreshProxy() => OnPropertyChanged(nameof(HasProxy));
 
     // ---- Cached account info (Refresh info) ----
     public string RobuxText => Model.Robux is { } r ? r.ToString("N0") : "—";

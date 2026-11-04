@@ -42,6 +42,9 @@
                       Command="{Binding PlacementTarget.Tag.EditTagsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="⌸  Set group…" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.SetGroupForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="⇄  Set proxy…" CommandParameter="{Binding}"
+                      ToolTip="Route this account's web-API calls (validation / launch auth) through a proxy"
+                      Command="{Binding PlacementTarget.Tag.SetProxyForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <TextBlock Text="COPY" Style="{StaticResource MenuHeader}"/>
             <MenuItem Header="user:pass" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
@@ -295,7 +298,7 @@
                                                 </Trigger>
                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                     <Setter Property="Background" Value="#33386A"/>
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -387,11 +390,16 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <StackPanel VerticalAlignment="Center" ToolTip="{Binding Username}">
-                                        <TextBlock Text="{Binding Username}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Username}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="⇄" FontSize="11" Margin="5,0,0,0" Foreground="{DynamicResource Accent}"
+                                                       ToolTip="Proxy enabled for this account"
+                                                       Visibility="{Binding HasProxy, Converter={StaticResource BoolVis}}"/>
+                                        </StackPanel>
                                         <TextBlock Foreground="{StaticResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis">
                                             <Run Text="ID"/> <Run Text="{Binding UserIdText, Mode=OneWay}"/>
                                         </TextBlock>
-                                        <TextBlock Text="{Binding TagsText}" Foreground="{StaticResource Accent}" FontSize="10"
+                                        <TextBlock Text="{Binding TagsText}" Foreground="{DynamicResource Accent}" FontSize="10"
                                                    TextTrimming="CharacterEllipsis"
                                                    Visibility="{Binding HasTags, Converter={StaticResource BoolVis}}"/>
                                     </StackPanel>

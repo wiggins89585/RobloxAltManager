@@ -27,18 +27,17 @@ public static class Theme
     };
 
     /// <summary>Applies the accent colour across the app. Falls back to the default for a bad value.</summary>
+    /// <remarks>
+    /// The resources are <b>replaced</b>, not mutated: once a Style/Template is sealed, WPF freezes the
+    /// brushes its setters reference, so mutating them is a no-op. Every accent reference in XAML uses
+    /// DynamicResource, so swapping the dictionary entry repaints the whole UI live.
+    /// </remarks>
     public static void ApplyAccent(string? hex)
     {
-        if (!TryParseColor(hex, out var c)) TryParseColor(DefaultAccent, out c);
-        SetBrush("Accent", c);
-        SetBrush("AccentHover", Scale(c, 0.82)); // slightly darker, for pressed/hover states
-    }
-
-    private static void SetBrush(string key, Color c)
-    {
         if (Application.Current is not { } app) return;
-        if (app.Resources[key] is SolidColorBrush { IsFrozen: false } b) b.Color = c;
-        else app.Resources[key] = new SolidColorBrush(c);
+        if (!TryParseColor(hex, out var c)) TryParseColor(DefaultAccent, out c);
+        app.Resources["Accent"] = new SolidColorBrush(c);
+        app.Resources["AccentHover"] = new SolidColorBrush(Scale(c, 0.82)); // darker, for pressed/hover
     }
 
     private static Color Scale(Color c, double f) =>
