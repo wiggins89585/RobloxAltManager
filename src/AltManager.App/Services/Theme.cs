@@ -64,12 +64,15 @@ public static class Theme
         // buttons and bright glass edges — so the acrylic blur shows through the whole UI.
         if (t.Name == "Liquid Glass")
         {
-            app.Resources["Bg"]     = Solid("#38EDF4FD");               // very translucent base (toolbars, inputs)
-            app.Resources["Panel"]  = VGrad("#4FFFFFFF", "#26FFFFFF");   // see-through frosted surface
-            app.Resources["Raised"] = VGrad("#8CFFFFFF", "#47FFFFFF");   // glossy glass button (kept readable)
-            app.Resources["Hover"]  = Solid("#B3FFFFFF");
-            app.Resources["Line"]   = Solid("#8CFFFFFF");               // soft glass edge
-            app.Resources["Selection"] = Solid("#80B6D2FB");
+            // Frost strength (0 = clear, 100 = heavily frosted) scales every glass surface's alpha.
+            var f = Math.Clamp(GlassFrost, 0, 100) / 100.0;
+            byte top = (byte)(0x14 + f * (0xD2 - 0x14));            // panel top alpha: ~8% … ~82%
+            app.Resources["Bg"]     = new SolidColorBrush(Color.FromArgb((byte)(top * 0.65), 0xED, 0xF4, 0xFD));
+            app.Resources["Panel"]  = VGradC(White(top), White((byte)(top * 0.5)));
+            app.Resources["Raised"] = VGradC(White((byte)Math.Min(255, top + 0x2E)), White((byte)(top * 0.6)));
+            app.Resources["Hover"]  = new SolidColorBrush(White((byte)Math.Min(255, top + 0x40)));
+            app.Resources["Line"]   = new SolidColorBrush(White((byte)Math.Min(255, top + 0x1E)));
+            app.Resources["Selection"] = new SolidColorBrush(Color.FromArgb((byte)Math.Min(255, top + 0x20), 0xB6, 0xD2, 0xFB));
         }
 
         // Title bar gets a theme-specific treatment (gradients for XP / Aero / Glass) so the top of
@@ -141,6 +144,19 @@ public static class Theme
     {
         TryParseColor(hex, out var c);
         return new SolidColorBrush(c);
+    }
+
+    /// <summary>Liquid Glass frost strength, 0 (clear) – 100 (frosted). Set before applying the theme.</summary>
+    public static int GlassFrost { get; set; } = 45;
+
+    private static Color White(byte alpha) => Color.FromArgb(alpha, 0xFF, 0xFF, 0xFF);
+
+    private static LinearGradientBrush VGradC(params Color[] colors)
+    {
+        var b = new LinearGradientBrush { StartPoint = new System.Windows.Point(0, 0), EndPoint = new System.Windows.Point(0, 1) };
+        for (var i = 0; i < colors.Length; i++)
+            b.GradientStops.Add(new GradientStop(colors[i], colors.Length == 1 ? 0 : (double)i / (colors.Length - 1)));
+        return b;
     }
 
     /// <summary>Replaces only the accent brushes (used for the live accent preview).</summary>

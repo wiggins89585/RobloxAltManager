@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:AltManager.App.ViewModels"
         xmlns:core="clr-namespace:AltManager.Core.Launch;assembly=AltManager.Core"
         Title="Roblox Alt Manager" Width="1080" Height="560" MinWidth="820" MinHeight="420"
+        WindowStyle="None"
         Icon="pack://application:,,,/Assets/RobloxAltManager.ico"
         Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"

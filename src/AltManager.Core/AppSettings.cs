@@ -78,6 +78,7 @@ public sealed class AppSettings
     // Theme
     public string Theme { get; set; } = "Dark";
     public string AccentColor { get; set; } = "#5865F2";
+    public int GlassFrost { get; set; } = 45;   // Liquid Glass opacity 0 (clear) – 100 (frosted)
 
     // Local automation API (opt-in; binds to 127.0.0.1 only, bearer-token protected)
     public bool LocalApiEnabled { get; set; }

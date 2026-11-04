@@ -1208,6 +1208,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         ApplyStreamerMode(_settings.StreamerMode);
         ConfigureAutoValidate();
         ApplyLocalApiSettings();
+        Theme.GlassFrost = _settings.GlassFrost;
         Theme.ApplyTheme(_settings.Theme, _settings.AccentColor);
         OnPropertyChanged(nameof(CardWidth));
     }

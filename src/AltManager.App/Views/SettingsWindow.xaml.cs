@@ -13,6 +13,7 @@ public partial class SettingsWindow : Window
     private readonly AppSettings _s;
     private readonly string _origTheme;
     private readonly string _origAccent;
+    private readonly int _origFrost;
     private bool _loadingTheme;
 
     public SettingsWindow(AppSettings settings)
@@ -20,6 +21,7 @@ public partial class SettingsWindow : Window
         _s = settings;
         _origTheme = settings.Theme;
         _origAccent = settings.AccentColor;
+        _origFrost = settings.GlassFrost;
         InitializeComponent();
         LaunchOnStartup.IsChecked = _s.LaunchOnWindowsStartup;
         AlwaysOnTop.IsChecked = _s.AlwaysOnTop;
@@ -43,6 +45,7 @@ public partial class SettingsWindow : Window
         _loadingTheme = true;
         foreach (var t in Services.Theme.Themes) ThemeBox.Items.Add(t.Name);
         ThemeBox.SelectedItem = Services.Theme.Find(_s.Theme).Name;
+        FrostSlider.Value = _s.GlassFrost;
 
         BuildAccentSwatches();
         AccentHex.Text = string.IsNullOrWhiteSpace(_s.AccentColor) ? Services.Theme.DefaultAccent : _s.AccentColor;
@@ -72,6 +75,14 @@ public partial class SettingsWindow : Window
         Services.Theme.ApplyTheme(theme, AccentHex.Text);
     }
 
+    /// <summary>Frost slider moved — preview the new Liquid Glass opacity live.</summary>
+    private void FrostSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loadingTheme) return;
+        Services.Theme.GlassFrost = (int)FrostSlider.Value;
+        Services.Theme.ApplyTheme(ThemeBox.SelectedItem as string ?? _origTheme, AccentHex.Text);
+    }
+
     private void BuildAccentSwatches()
     {
         foreach (var (name, hex) in Services.Theme.AccentPresets)
@@ -98,7 +109,11 @@ public partial class SettingsWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         // Theme previews live while the dialog is open; if the user cancelled, put it back.
-        if (DialogResult != true) Services.Theme.ApplyTheme(_origTheme, _origAccent);
+        if (DialogResult != true)
+        {
+            Services.Theme.GlassFrost = _origFrost;
+            Services.Theme.ApplyTheme(_origTheme, _origAccent);
+        }
         base.OnClosed(e);
     }
 
@@ -144,6 +159,7 @@ public partial class SettingsWindow : Window
         _s.AccentColor = Services.Theme.TryParseColor(AccentHex.Text, out _)
             ? AccentHex.Text.Trim()
             : Services.Theme.DefaultAccent;
+        _s.GlassFrost = (int)FrostSlider.Value;
         _s.Save();
         DialogResult = true;
     }
