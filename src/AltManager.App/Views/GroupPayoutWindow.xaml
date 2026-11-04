@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Give Group Robux" Width="430" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
+        Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}">
     <StackPanel Margin="16">
         <TextBlock Text="Pay Robux from a group you own to the selected accounts (one-time group payout)."
-                   Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"/>
+                   Foreground="{DynamicResource Muted}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"/>
 
         <TextBlock Text="Payer (group owner account)" Style="{StaticResource Label}"/>
         <ComboBox x:Name="PayerBox" DisplayMemberPath="Label"/>
@@ -16,13 +16,13 @@
             <Button DockPanel.Dock="Right" Content="Check funds" Margin="6,0,0,0" Click="CheckFunds_Click"/>
             <TextBox x:Name="GroupBox"/>
         </DockPanel>
-        <TextBlock x:Name="FundsText" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,4,0,0"/>
+        <TextBlock x:Name="FundsText" Foreground="{DynamicResource Muted}" FontSize="11" Margin="0,4,0,0"/>
 
         <TextBlock Text="Robux to each account" Style="{StaticResource Label}"/>
         <TextBox x:Name="AmountBox" Text="1" TextChanged="Amount_TextChanged"/>
 
         <TextBlock Text="Recipients" Style="{StaticResource Label}"/>
-        <Border Background="{StaticResource Panel}" CornerRadius="5" Padding="6" MaxHeight="140">
+        <Border Background="{DynamicResource Panel}" CornerRadius="5" Padding="6" MaxHeight="140">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="Recipients">
                     <ItemsControl.ItemTemplate>

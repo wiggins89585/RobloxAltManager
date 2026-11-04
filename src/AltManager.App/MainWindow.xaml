@@ -5,7 +5,7 @@
         xmlns:core="clr-namespace:AltManager.Core.Launch;assembly=AltManager.Core"
         Title="Roblox Alt Manager" Width="1080" Height="560" MinWidth="820" MinHeight="420"
         Icon="pack://application:,,,/Assets/RobloxAltManager.ico"
-        Background="{StaticResource Bg}" Foreground="{StaticResource Fg}"
+        Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -93,7 +93,7 @@
     </Window.InputBindings>
 
     <!-- Maximized borderless windows overhang the screen by the resize border; pad it back in. -->
-    <Border BorderBrush="{StaticResource Line}">
+    <Border BorderBrush="{DynamicResource Line}">
         <Border.Style>
             <Style TargetType="Border">
                 <Setter Property="BorderThickness" Value="1"/>
@@ -109,7 +109,7 @@
     <Grid>
     <DockPanel>
         <!-- ================= Title bar + toolbar ================= -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Height="36">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg}" Height="36">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Minimize"/>
@@ -121,15 +121,15 @@
                        Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"/>
                 <TextBlock x:Name="VersionText" FontSize="10" VerticalAlignment="Center" Margin="-10,0,12,0"
-                           Foreground="{StaticResource Muted}"/>
+                           Foreground="{DynamicResource Muted}"/>
                 <!-- empty fill = draggable window area -->
                 <Border Background="Transparent"/>
             </DockPanel>
         </Border>
 
         <!-- ================= Actions toolbar (account actions left · app tools right) ================= -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Padding="8,2,8,6"
-                BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg}" Padding="8,2,8,6"
+                BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
             <DockPanel LastChildFill="False">
                 <!-- Account actions -->
                 <Button DockPanel.Dock="Left" Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
@@ -166,12 +166,12 @@
         </Border>
 
         <!-- ================= Status bar (hidden when idle) ================= -->
-        <Border DockPanel.Dock="Bottom" Background="{StaticResource Bg}" Padding="10,3"
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg}" Padding="10,3"
                 Visibility="{Binding HasStatus, Converter={StaticResource BoolVis}}">
             <DockPanel>
                 <ProgressBar DockPanel.Dock="Right" Width="100" Height="6" IsIndeterminate="True"
                              Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="{StaticResource Muted}"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="{DynamicResource Muted}"/>
             </DockPanel>
         </Border>
 
@@ -200,7 +200,7 @@
                                 ToolTip="Delete selected custom group"/>
                     </StackPanel>
                     <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" FontSize="12"
-                             Background="Transparent" Foreground="{StaticResource Fg}" BorderThickness="0"/>
+                             Background="Transparent" Foreground="{DynamicResource Fg}" BorderThickness="0"/>
                 </DockPanel>
             </Border>
 
@@ -214,12 +214,12 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0,0,0"
                                 Visibility="{Binding IsGridView, Converter={StaticResource BoolVis}}"
                                 ToolTip="Cards per row (0 = fit to width)">
-                        <TextBlock Text="Cols" FontSize="11" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock Text="Cols" FontSize="11" Foreground="{DynamicResource Muted}" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <TextBox Width="32" Text="{Binding CardColumns, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
 
-                    <Border DockPanel.Dock="Right" Background="{StaticResource Bg}" CornerRadius="5" Padding="2" Margin="4,0,0,0"
-                            BorderBrush="{StaticResource Line}" BorderThickness="1">
+                    <Border DockPanel.Dock="Right" Background="{DynamicResource Bg}" CornerRadius="5" Padding="2" Margin="4,0,0,0"
+                            BorderBrush="{DynamicResource Line}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource ToggleSeg}" Content="☰" ToolTip="List view" GroupName="View"
                                          IsChecked="{Binding IsGridView, Mode=OneWay, Converter={StaticResource NotBool}}"
@@ -237,7 +237,7 @@
                     <Grid>
                         <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  ToolTip="Filter by username, note, tag, game ID, or user ID"/>
-                        <TextBlock Text="Search accounts…" Foreground="{StaticResource Muted}" IsHitTestVisible="False"
+                        <TextBlock Text="Search accounts…" Foreground="{DynamicResource Muted}" IsHitTestVisible="False"
                                    VerticalAlignment="Center" Margin="8,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -290,14 +290,14 @@
                                         ToolTip="{Binding Username}">
                                     <Border.Style>
                                         <Style TargetType="Border">
-                                            <Setter Property="Background" Value="{StaticResource Panel}"/>
+                                            <Setter Property="Background" Value="{DynamicResource Panel}"/>
                                             <Setter Property="BorderBrush" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#313338"/>
+                                                    <Setter Property="Background" Value="{DynamicResource Hover}"/>
                                                 </Trigger>
                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                    <Setter Property="Background" Value="#33386A"/>
+                                                    <Setter Property="Background" Value="{DynamicResource Selection}"/>
                                                     <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -309,14 +309,14 @@
                                                    Visibility="{Binding Favorite, Converter={StaticResource BoolVis}}"/>
                                         <Grid DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,8,0" VerticalAlignment="Top"
                                               ToolTip="{Binding PresenceText}">
-                                            <Ellipse Width="40" Height="40" Fill="{StaticResource Raised}"/>
+                                            <Ellipse Width="40" Height="40" Fill="{DynamicResource Raised}"/>
                                             <Ellipse Width="40" Height="40">
                                                 <Ellipse.Fill>
                                                     <ImageBrush ImageSource="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
                                                 </Ellipse.Fill>
                                             </Ellipse>
                                             <Ellipse Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                     Stroke="{StaticResource Panel}" StrokeThickness="2"
+                                                     Stroke="{DynamicResource Panel}" StrokeThickness="2"
                                                      Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
                                         </Grid>
                                         <StackPanel VerticalAlignment="Center">
@@ -325,12 +325,12 @@
                                                 <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"
                                                          Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
                                                 <TextBlock Text="{Binding Status, Converter={StaticResource StatusText}}" FontSize="10"
-                                                           Foreground="{StaticResource Muted}"/>
-                                                <TextBlock Text="✎" FontSize="10" Margin="5,0,0,0" Foreground="{StaticResource Muted}"
+                                                           Foreground="{DynamicResource Muted}"/>
+                                                <TextBlock Text="✎" FontSize="10" Margin="5,0,0,0" Foreground="{DynamicResource Muted}"
                                                            ToolTip="{Binding Notes}"
                                                            Visibility="{Binding HasNotes, Converter={StaticResource BoolVis}}"/>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding GameLabel}" FontSize="10" Foreground="{StaticResource Muted}"
+                                            <TextBlock Text="{Binding GameLabel}" FontSize="10" Foreground="{DynamicResource Muted}"
                                                        TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
                                         </StackPanel>
                                     </DockPanel>
@@ -341,15 +341,15 @@
                 </ScrollViewer>
 
                 <!-- ================= List view ================= -->
-                <Border CornerRadius="6" ClipToBounds="True" Background="{StaticResource Panel}"
+                <Border CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Panel}"
                         Visibility="{Binding IsGridView, Converter={StaticResource BoolVisInv}}">
                 <DataGrid ItemsSource="{Binding AccountsView}" AutoGenerateColumns="False"
                           CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
-                          MinRowHeight="42" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource Line}"
+                          MinRowHeight="42" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
                           SelectionMode="Extended" FontSize="12"
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          Background="{StaticResource Panel}" RowBackground="{StaticResource Panel}"
-                          Foreground="{StaticResource Fg}" BorderThickness="0">
+                          Background="{DynamicResource Panel}" RowBackground="{DynamicResource Panel}"
+                          Foreground="{DynamicResource Fg}" BorderThickness="0">
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                             <EventSetter Event="PreviewMouseLeftButtonDown" Handler="Row_PreviewMouseLeftButtonDown"/>
@@ -372,14 +372,14 @@
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <Grid Width="34" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center"
                                           ToolTip="{Binding PresenceText}">
-                                        <Ellipse Width="30" Height="30" Fill="{StaticResource Raised}"/>
+                                        <Ellipse Width="30" Height="30" Fill="{DynamicResource Raised}"/>
                                         <Ellipse Width="30" Height="30">
                                             <Ellipse.Fill>
                                                 <ImageBrush ImageSource="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
                                             </Ellipse.Fill>
                                         </Ellipse>
                                         <Ellipse Width="11" Height="11" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                 Stroke="{StaticResource Panel}" StrokeThickness="2"
+                                                 Stroke="{DynamicResource Panel}" StrokeThickness="2"
                                                  Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
                                     </Grid>
                                 </DataTemplate>
@@ -396,7 +396,7 @@
                                                        ToolTip="Proxy enabled for this account"
                                                        Visibility="{Binding HasProxy, Converter={StaticResource BoolVis}}"/>
                                         </StackPanel>
-                                        <TextBlock Foreground="{StaticResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis">
+                                        <TextBlock Foreground="{DynamicResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis">
                                             <Run Text="ID"/> <Run Text="{Binding UserIdText, Mode=OneWay}"/>
                                         </TextBlock>
                                         <TextBlock Text="{Binding TagsText}" Foreground="{DynamicResource Accent}" FontSize="10"
@@ -440,7 +440,7 @@
                         </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="ROBUX" Width="66" MinWidth="60" IsReadOnly="True"
-                                            Binding="{Binding RobuxText}" Foreground="{StaticResource Fg}"/>
+                                            Binding="{Binding RobuxText}" Foreground="{DynamicResource Fg}"/>
 
                         <DataGridTemplateColumn Header="PREM" Width="46" MinWidth="44" SortMemberPath="IsPremium">
                             <DataGridTemplateColumn.CellTemplate>
@@ -453,14 +453,14 @@
                         </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="AGE" Width="48" MinWidth="44" IsReadOnly="True"
-                                            Binding="{Binding AgeText}" Foreground="{StaticResource Muted}"/>
+                                            Binding="{Binding AgeText}" Foreground="{DynamicResource Muted}"/>
 
                         <DataGridTextColumn Header="GAME" Width="1*" MinWidth="110"
                                             Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                    <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
                                     <Setter Property="ToolTip" Value="Per-account Roblox game ID (blank = use Launch panel). Enter a numeric Place ID."/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
@@ -520,7 +520,7 @@
                             <DockPanel>
                                 <TextBlock Text="ACTIVE CLIENTS" Style="{StaticResource Heading}" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding ActiveProcesses.Count}" HorizontalAlignment="Right" FontSize="11"
-                                           Foreground="{StaticResource Muted}"/>
+                                           Foreground="{DynamicResource Muted}"/>
                             </DockPanel>
                             <ItemsControl ItemsSource="{Binding ActiveProcesses}" Margin="0,4,0,0" FontSize="12">
                                 <ItemsControl.ItemTemplate>
@@ -532,8 +532,8 @@
                                                     CommandParameter="{Binding}"/>
                                             <TextBlock VerticalAlignment="Center">
                                                 <Run Text="{Binding AccountLabel, Mode=OneWay}" FontWeight="SemiBold"/>
-                                                <Run Text="  PID" Foreground="{StaticResource Muted}"/>
-                                                <Run Text="{Binding Pid, Mode=OneWay}" Foreground="{StaticResource Muted}"/>
+                                                <Run Text="  PID" Foreground="{DynamicResource Muted}"/>
+                                                <Run Text="{Binding Pid, Mode=OneWay}" Foreground="{DynamicResource Muted}"/>
                                             </TextBlock>
                                         </DockPanel>
                                     </DataTemplate>
@@ -561,15 +561,15 @@
     <!-- ================= Lock overlay ================= -->
     <Border x:Name="LockOverlay" Background="#F21E1F22" IsVisibleChanged="LockOverlay_IsVisibleChanged"
             Visibility="{Binding IsLocked, Converter={StaticResource BoolVis}}">
-        <Border Background="{StaticResource Panel}" CornerRadius="10" Padding="24" Width="320"
+        <Border Background="{DynamicResource Panel}" CornerRadius="10" Padding="24" Width="320"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
-                BorderBrush="{StaticResource Line}" BorderThickness="1">
+                BorderBrush="{DynamicResource Line}" BorderThickness="1">
             <StackPanel>
                 <TextBlock Text="🔒  Locked" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-                <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,12"
+                <TextBlock Foreground="{DynamicResource Muted}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,12"
                            Text="This session is locked."/>
                 <PasswordBox x:Name="UnlockBox" Margin="0,0,0,10" Padding="6,5" KeyDown="UnlockBox_KeyDown"
-                             Background="{StaticResource Bg}" Foreground="{StaticResource Fg}" CaretBrush="{StaticResource Fg}"
+                             Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}" CaretBrush="{DynamicResource Fg}"
                              Visibility="{Binding IsPasswordProtected, Converter={StaticResource BoolVis}}"/>
                 <Button Content="Unlock" Style="{StaticResource AccentButton}" Click="Unlock_Click"
                         HorizontalAlignment="Center" Padding="26,5"/>

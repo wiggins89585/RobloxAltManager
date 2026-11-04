@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Settings" Width="720" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
+        Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -20,30 +20,30 @@
 
             <TextBlock Text="STARTUP" Style="{StaticResource Heading}"/>
             <CheckBox x:Name="LaunchOnStartup" Content="Load Alt Manager when I sign in to Windows"
-                      Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+                      Margin="0,8,0,4" Foreground="{DynamicResource Fg}"/>
             <CheckBox x:Name="AlwaysOnTop" Content="Keep the app window on top of other windows"
-                      Margin="0,4,0,0" Foreground="{StaticResource Fg}"/>
+                      Margin="0,4,0,0" Foreground="{DynamicResource Fg}"/>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="ACCOUNT HEALTH" Style="{StaticResource Heading}"/>
-            <CheckBox x:Name="AutoStartup" Content="Re-check all accounts on startup" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+            <CheckBox x:Name="AutoStartup" Content="Re-check all accounts on startup" Margin="0,8,0,4" Foreground="{DynamicResource Fg}"/>
             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                <TextBlock Text="Auto re-check every" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+                <TextBlock Text="Auto re-check every" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
                 <TextBox x:Name="Interval" Width="48" Margin="8,0,6,0"/>
-                <TextBlock Text="minutes (0 = off)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+                <TextBlock Text="minutes (0 = off)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
             </StackPanel>
             <CheckBox x:Name="AutoRejoin" Content="Auto-rejoin a client into its game if it closes unexpectedly"
-                      Margin="0,8,0,0" Foreground="{StaticResource Fg}"/>
+                      Margin="0,8,0,0" Foreground="{DynamicResource Fg}"/>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="LOCAL AUTOMATION API" Style="{StaticResource Heading}"/>
             <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap"
                        Text="Localhost-only HTTP API so scripts, Stream Deck or hotkey tools can list and launch accounts. Binds to 127.0.0.1 only; every request needs the token below."/>
-            <CheckBox x:Name="ApiEnabled" Content="Enable the local API" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+            <CheckBox x:Name="ApiEnabled" Content="Enable the local API" Margin="0,8,0,4" Foreground="{DynamicResource Fg}"/>
             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                <TextBlock Text="Port" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+                <TextBlock Text="Port" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
                 <TextBox x:Name="ApiPort" Width="64" Margin="8,0,0,0"/>
             </StackPanel>
             <TextBlock Text="Token (send as 'Authorization: Bearer &lt;token&gt;')" Style="{StaticResource Label}" Margin="0,8,0,2"/>
@@ -55,7 +55,7 @@
             <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,6,0,0"
                        Text="GET /ping · GET /accounts · GET /groups · POST /launch {&quot;game&quot;,&quot;accounts&quot;,&quot;group&quot;}"/>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="VAULT BACKUP" Style="{StaticResource Heading}"/>
             <TextBlock Text="The backup is the encrypted vault file; it needs the same master password to open." Style="{StaticResource Label}" TextWrapping="Wrap"/>
@@ -70,48 +70,53 @@
 
             <TextBlock Text="UPDATES" Style="{StaticResource Heading}"/>
             <CheckBox x:Name="AutoUpdate" Content="Automatically download and install updates"
-                      Margin="0,8,0,0" Foreground="{StaticResource Fg}"/>
+                      Margin="0,8,0,0" Foreground="{DynamicResource Fg}"/>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="PRIVACY" Style="{StaticResource Heading}"/>
-            <CheckBox x:Name="Streamer" Content="Streamer mode — mask usernames and IDs" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
-            <CheckBox x:Name="ConfirmCopy" Content="Confirm before copying a password" Margin="0,4,0,4" Foreground="{StaticResource Fg}"/>
+            <CheckBox x:Name="Streamer" Content="Streamer mode — mask usernames and IDs" Margin="0,8,0,4" Foreground="{DynamicResource Fg}"/>
+            <CheckBox x:Name="ConfirmCopy" Content="Confirm before copying a password" Margin="0,4,0,4" Foreground="{DynamicResource Fg}"/>
             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                <TextBlock Text="Clear clipboard" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+                <TextBlock Text="Clear clipboard" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
                 <TextBox x:Name="ClipClear" Width="48" Margin="8,0,6,0"/>
-                <TextBlock Text="s after copying (0 = never)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+                <TextBlock Text="s after copying (0 = never)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                <TextBlock Text="Auto-lock after" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+                <TextBlock Text="Auto-lock after" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
                 <TextBox x:Name="AutoLock" Width="48" Margin="8,0,6,0"/>
-                <TextBlock Text="min idle (0 = off)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+                <TextBlock Text="min idle (0 = off)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
             </StackPanel>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="THEME" Style="{StaticResource Heading}"/>
-            <TextBlock Text="Accent colour for highlights, buttons and selection. Applies instantly."
+            <TextBlock Text="Pick a theme preset; tweak the accent below. Previews live — Cancel reverts."
                        Style="{StaticResource Label}" TextWrapping="Wrap"/>
-            <WrapPanel x:Name="AccentSwatches" Margin="0,8,0,6"/>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <TextBlock Text="Theme" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
+                <ComboBox x:Name="ThemeBox" Width="160" Margin="8,0,0,0" SelectionChanged="ThemeBox_Changed"/>
+            </StackPanel>
+            <TextBlock Text="Accent" Style="{StaticResource Label}" Margin="0,10,0,2"/>
+            <WrapPanel x:Name="AccentSwatches" Margin="0,0,0,6"/>
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Hex" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+                <TextBlock Text="Hex" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
                 <TextBox x:Name="AccentHex" Width="92" Margin="8,0,8,0" MaxLength="9"/>
                 <Border x:Name="AccentPreview" Width="24" Height="24" CornerRadius="4"
-                        BorderBrush="{StaticResource Line}" BorderThickness="1"/>
+                        BorderBrush="{DynamicResource Line}" BorderThickness="1"/>
             </StackPanel>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="VIEW" Style="{StaticResource Heading}"/>
             <CheckBox x:Name="RememberView" Content="Remember view, group and window size between sessions"
-                      Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+                      Margin="0,8,0,4" Foreground="{DynamicResource Fg}"/>
             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                <TextBlock Text="Card width (grid view)" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+                <TextBlock Text="Card width (grid view)" VerticalAlignment="Center" Foreground="{DynamicResource Fg}"/>
                 <TextBox x:Name="CardWidth" Width="56" Margin="8,0,0,0"/>
             </StackPanel>
 
-            <Border Height="1" Background="{StaticResource Line}" Margin="0,12"/>
+            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
             <TextBlock Text="BROWSER" Style="{StaticResource Heading}"/>
             <TextBlock Text="Custom User-Agent (blank = engine default; recommended)" Style="{StaticResource Label}" TextWrapping="Wrap"/>

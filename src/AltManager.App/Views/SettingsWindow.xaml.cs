@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security;
 using System.Windows;
+using System.Windows.Controls;
 using AltManager.Core;
 using AltManager.Core.Vault;
 using Microsoft.Win32;
@@ -10,10 +11,15 @@ namespace AltManager.App.Views;
 public partial class SettingsWindow : Window
 {
     private readonly AppSettings _s;
+    private readonly string _origTheme;
+    private readonly string _origAccent;
+    private bool _loadingTheme;
 
     public SettingsWindow(AppSettings settings)
     {
         _s = settings;
+        _origTheme = settings.Theme;
+        _origAccent = settings.AccentColor;
         InitializeComponent();
         LaunchOnStartup.IsChecked = _s.LaunchOnWindowsStartup;
         AlwaysOnTop.IsChecked = _s.AlwaysOnTop;
@@ -34,15 +40,41 @@ public partial class SettingsWindow : Window
             ? Services.LocalApiServer.NewToken()
             : _s.LocalApiToken;
 
+        _loadingTheme = true;
+        foreach (var t in Services.Theme.Themes) ThemeBox.Items.Add(t.Name);
+        ThemeBox.SelectedItem = Services.Theme.Find(_s.Theme).Name;
+
         BuildAccentSwatches();
         AccentHex.Text = string.IsNullOrWhiteSpace(_s.AccentColor) ? Services.Theme.DefaultAccent : _s.AccentColor;
-        AccentHex.TextChanged += (_, _) => UpdateAccentPreview();
+        AccentHex.TextChanged += (_, _) => OnAccentChanged();
         UpdateAccentPreview();
+        _loadingTheme = false;
+    }
+
+    /// <summary>Switching theme previews it live and resets the accent to that theme's own accent.</summary>
+    private void ThemeBox_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loadingTheme || ThemeBox.SelectedItem is not string name) return;
+        var preset = Services.Theme.Find(name);
+        _loadingTheme = true;
+        AccentHex.Text = preset.Accent;   // show the theme's accent (does not re-apply twice)
+        _loadingTheme = false;
+        UpdateAccentPreview();
+        Services.Theme.ApplyTheme(name, preset.Accent);
+    }
+
+    /// <summary>Accent edited (typed or swatch) — preview it live on top of the selected theme.</summary>
+    private void OnAccentChanged()
+    {
+        UpdateAccentPreview();
+        if (_loadingTheme) return;
+        var theme = ThemeBox.SelectedItem as string ?? _origTheme;
+        Services.Theme.ApplyTheme(theme, AccentHex.Text);
     }
 
     private void BuildAccentSwatches()
     {
-        foreach (var (name, hex) in Services.Theme.Presets)
+        foreach (var (name, hex) in Services.Theme.AccentPresets)
         {
             if (!Services.Theme.TryParseColor(hex, out var c)) continue;
             var btn = new System.Windows.Controls.Button
@@ -61,6 +93,13 @@ public partial class SettingsWindow : Window
     {
         if (Services.Theme.TryParseColor(AccentHex.Text, out var c))
             AccentPreview.Background = new System.Windows.Media.SolidColorBrush(c);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        // Theme previews live while the dialog is open; if the user cancelled, put it back.
+        if (DialogResult != true) Services.Theme.ApplyTheme(_origTheme, _origAccent);
+        base.OnClosed(e);
     }
 
     private void CopyToken_Click(object sender, RoutedEventArgs e)
@@ -101,6 +140,7 @@ public partial class SettingsWindow : Window
         _s.LocalApiEnabled = ApiEnabled.IsChecked == true;
         _s.LocalApiPort = ParseClamp(ApiPort.Text, 7963, 1024, 65535);
         _s.LocalApiToken = ApiToken.Text.Trim();
+        _s.Theme = ThemeBox.SelectedItem as string ?? Services.Theme.DefaultTheme;
         _s.AccentColor = Services.Theme.TryParseColor(AccentHex.Text, out _)
             ? AccentHex.Text.Trim()
             : Services.Theme.DefaultAccent;

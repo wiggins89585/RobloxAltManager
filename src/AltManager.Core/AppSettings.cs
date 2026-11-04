@@ -75,6 +75,7 @@ public sealed class AppSettings
     public string CustomUserAgent { get; set; } = "";
 
     // Theme
+    public string Theme { get; set; } = "Dark";
     public string AccentColor { get; set; } = "#5865F2";
 
     // Local automation API (opt-in; binds to 127.0.0.1 only, bearer-token protected)

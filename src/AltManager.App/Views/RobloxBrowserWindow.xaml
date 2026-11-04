@@ -3,14 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Roblox" Width="1100" Height="760" MinWidth="520" MinHeight="480"
-        WindowStartupLocation="CenterOwner" Background="{StaticResource Bg}">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource Bg}">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0"
                       CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
-    <Border BorderBrush="{StaticResource Line}">
+    <Border BorderBrush="{DynamicResource Line}">
         <Border.Style>
             <Style TargetType="Border">
                 <Setter Property="BorderThickness" Value="1"/>
@@ -25,8 +25,8 @@
 
         <DockPanel>
             <!-- ================= Custom title bar ================= -->
-            <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Height="38"
-                    BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource Bg}" Height="38"
+                    BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
                 <DockPanel>
                     <!-- Window caption buttons -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
@@ -45,7 +45,7 @@
                     </StackPanel>
 
                     <!-- Account label -->
-                    <TextBlock x:Name="StatusText" Foreground="{StaticResource Muted}" VerticalAlignment="Center"
+                    <TextBlock x:Name="StatusText" Foreground="{DynamicResource Muted}" VerticalAlignment="Center"
                                DockPanel.Dock="Right" MaxWidth="190" Margin="8,0,10,0"
                                TextTrimming="CharacterEllipsis"/>
 

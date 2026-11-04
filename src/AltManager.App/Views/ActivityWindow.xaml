@@ -3,17 +3,17 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:AltManager.App.ViewModels"
         Title="Activity Log" Width="480" Height="560" MinWidth="360" MinHeight="300"
-        WindowStartupLocation="CenterOwner" Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}">
     <DockPanel Margin="12">
-        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Foreground="{StaticResource Muted}" FontSize="11"
+        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Foreground="{DynamicResource Muted}" FontSize="11"
                    Text="Recent activity (also saved to activity.log in the app's data folder)."/>
-        <Border CornerRadius="6" Background="{StaticResource Panel}" ClipToBounds="True">
+        <Border CornerRadius="6" Background="{DynamicResource Panel}" ClipToBounds="True">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="Items">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:ActivityEntry">
                             <DockPanel Margin="8,4">
-                                <TextBlock DockPanel.Dock="Left" Text="{Binding TimeText}" Foreground="{StaticResource Muted}"
+                                <TextBlock DockPanel.Dock="Left" Text="{Binding TimeText}" Foreground="{DynamicResource Muted}"
                                            FontFamily="Consolas" FontSize="11" VerticalAlignment="Top" Margin="0,0,8,0"/>
                                 <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="12"
                                            Foreground="{Binding Level, Converter={StaticResource ActivityBrush}}"/>
