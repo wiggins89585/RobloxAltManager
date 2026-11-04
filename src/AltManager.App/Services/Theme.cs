@@ -60,6 +60,18 @@ public static class Theme
         Set(app, "Muted", t.Muted);
         Set(app, "Selection", t.Selection);
 
+        // Liquid Glass: make EVERY surface glassy — gradient frosted panels, glossy translucent
+        // buttons and bright glass edges — so the acrylic blur shows through the whole UI.
+        if (t.Name == "Liquid Glass")
+        {
+            app.Resources["Bg"]     = Solid("#63EDF4FD");               // translucent base (toolbars, inputs)
+            app.Resources["Panel"]  = VGrad("#82FFFFFF", "#4DFFFFFF");   // frosted gradient surface
+            app.Resources["Raised"] = VGrad("#A6FFFFFF", "#5CFFFFFF");   // glossy glass button
+            app.Resources["Hover"]  = Solid("#C7FFFFFF");
+            app.Resources["Line"]   = Solid("#B3FFFFFF");               // bright glass edge
+            app.Resources["Selection"] = Solid("#9CC2DAFB");
+        }
+
         // Title bar gets a theme-specific treatment (gradients for XP / Aero / Glass) so the top of
         // the app reads as the theme it's named after.
         app.Resources["TitleBar"] = BuildTitleBar(t);
@@ -71,8 +83,13 @@ public static class Theme
 
         _currentTheme = t.Name;
         ApplyBackdrop();
+        ThemeChanged?.Invoke(t.Name);
     }
 
+    /// <summary>Raised after a theme is applied (name of the theme). Lets the window swap chrome, e.g. macOS traffic lights.</summary>
+    public static event Action<string>? ThemeChanged;
+
+    public static string CurrentTheme => _currentTheme;
     private static string _currentTheme = DefaultTheme;
 
     /// <summary>Which Win11 backdrop a theme wants behind its (translucent) surfaces.</summary>
@@ -98,7 +115,7 @@ public static class Theme
         "Windows XP"    => VGrad("#3F8CEA", "#245EDC", "#1941A5"),   // Luna blue
         "Frutiger Aero" => VGrad("#86E3F7", "#28A9DD", "#1687C4"),   // glossy sky
         "Liquid Glass"  => VGrad("#CCFFFFFF", "#A6EAF2FC", "#8CD6E6F6"), // translucent frost (acrylic shows through)
-        "macOS"         => Solid("#D0EDEDEF"),
+        "macOS"         => VGrad("#F6F6F8", "#E4E4E7", "#D6D6DA"),       // light brushed-metal bar
         "Light"         => Solid("#E7E9EC"),
         _               => Solid(t.Bg),                             // dark themes: flat
     };

@@ -122,13 +122,21 @@
         <!-- ================= Title bar + toolbar ================= -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource TitleBar}" Height="36">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                <!-- macOS-style traffic lights (left); shown only on the macOS theme -->
+                <StackPanel x:Name="MacControls" DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="11,0,6,0" Visibility="Collapsed" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource TrafficLight}" Background="#FF5F57" Content="✕" Click="Close_Click" ToolTip="Close"/>
+                    <Button Style="{StaticResource TrafficLight}" Background="#FEBC2E" Content="–" Click="Minimize_Click" ToolTip="Minimize"/>
+                    <Button Style="{StaticResource TrafficLight}" Background="#28C840" Content="+" Click="Maximize_Click" ToolTip="Zoom"/>
+                </StackPanel>
+
+                <StackPanel x:Name="WinControls" DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Minimize"/>
                     <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Maximize_Click" ToolTip="Maximize"/>
                     <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Close"/>
                 </StackPanel>
 
-                <Image Source="/Assets/RobloxAltManager.png" Width="32" Height="32" Margin="6,0,0,0"
+                <Image x:Name="AppIcon" Source="/Assets/RobloxAltManager.png" Width="32" Height="32" Margin="6,0,0,0"
                        Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"
                            Foreground="{DynamicResource TitleBarText}"/>

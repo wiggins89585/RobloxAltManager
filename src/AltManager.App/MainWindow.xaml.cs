@@ -25,6 +25,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         VersionText.Text = $"v{typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}";
+
+        // Swap window chrome per theme (macOS gets traffic lights instead of Windows buttons).
+        Services.Theme.ThemeChanged += ApplyChrome;
+        ApplyChrome(Services.Theme.CurrentTheme);
         StateChanged += (_, _) =>
         {
             // Segoe MDL2: E923 = restore, E922 = maximize
@@ -62,6 +66,21 @@ public partial class MainWindow : Window
     {
         if (WindowState != WindowState.Normal) return; // keep the restore size, not the maximized one
         Vm?.SaveViewState(ActualWidth, ActualHeight);
+    }
+
+    /// <summary>macOS uses traffic lights on the left and no Windows caption buttons; every other theme is the reverse.</summary>
+    private void ApplyChrome(string themeName)
+    {
+        var mac = themeName == "macOS";
+        MacControls.Visibility = mac ? Visibility.Visible : Visibility.Collapsed;
+        WinControls.Visibility = mac ? Visibility.Collapsed : Visibility.Visible;
+        AppIcon.Visibility = mac ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        Services.Theme.ThemeChanged -= ApplyChrome;
+        base.OnClosed(e);
     }
 
     private AltManager.App.ViewModels.MainViewModel? Vm => DataContext as AltManager.App.ViewModels.MainViewModel;

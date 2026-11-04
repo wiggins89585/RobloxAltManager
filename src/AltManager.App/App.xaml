@@ -153,6 +153,33 @@
             </Setter>
         </Style>
 
+        <!-- ===== macOS traffic-light window buttons ===== -->
+        <Style x:Key="TrafficLight" TargetType="Button">
+            <Setter Property="Width" Value="13"/>
+            <Setter Property="Height" Value="13"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="#70000000"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Ellipse Fill="{TemplateBinding Background}" Stroke="#1A000000" StrokeThickness="0.5"/>
+                            <ContentPresenter x:Name="Glyph" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Glyph" Property="Opacity" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- ===== Inputs ===== -->
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="{DynamicResource Bg}"/>
