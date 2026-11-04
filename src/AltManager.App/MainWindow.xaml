@@ -91,6 +91,8 @@
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
                             WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Games you've launched (click one to reuse it)"/>
                     <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
                             ToolTip="Mask or show usernames and IDs"/>
                     <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"

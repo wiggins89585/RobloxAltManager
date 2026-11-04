@@ -94,13 +94,55 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ConfigureAutoValidate();
 
         _api.CookieRotated += OnCookieRotated;
-        _tracker.ProcessStarted += (_, p) => OnUi(() => { ActiveProcesses.Add(p); SetPid(p.AccountId, p.Pid); });
+        _tracker.ProcessStarted += (_, p) => OnUi(() => { ActiveProcesses.Add(p); SetPid(p.AccountId, p.Pid); _ = RestoreWindowBoundsAsync(p); });
         _tracker.ProcessExited += (_, p) => OnUi(() =>
         {
             var row = ActiveProcesses.FirstOrDefault(x => x.Pid == p.Pid);
             if (row is not null) ActiveProcesses.Remove(row);
             SetPid(p.AccountId, null);
+            PersistWindowBounds(p.AccountId);
         });
+        _boundsPoll.Interval = TimeSpan.FromSeconds(3);
+        _boundsPoll.Tick += (_, _) =>
+        {
+            foreach (var p in ActiveProcesses)
+                if (GameWindowBounds.Capture(p.MainWindow) is { } b) _liveBounds[p.AccountId] = b;
+        };
+        _boundsPoll.Start();
+    }
+
+    // ---------------- Per-account game-window size memory ----------------
+
+    private readonly DispatcherTimer _boundsPoll = new();
+    private readonly Dictionary<Guid, SavedWindowBounds> _liveBounds = new();
+
+    /// <summary>Restore an account's last window size once its client window appears (and again after Roblox settles).</summary>
+    private async Task RestoreWindowBoundsAsync(TrackedProcess p)
+    {
+        var acct = Accounts.FirstOrDefault(a => a.Model.Id == p.AccountId)?.Model;
+        if (acct?.WindowBounds is not { } b) return;
+
+        for (var i = 0; i < 40; i++) // ~20s for the window to exist
+        {
+            if (!_tracker.IsRunning(p.AccountId)) return;
+            if (p.MainWindow != IntPtr.Zero)
+            {
+                GameWindowBounds.Apply(p.MainWindow, b);
+                await Task.Delay(4000);                         // Roblox resizes itself during load…
+                if (_tracker.IsRunning(p.AccountId)) GameWindowBounds.Apply(p.MainWindow, b); // …so set it again
+                return;
+            }
+            await Task.Delay(500);
+        }
+    }
+
+    private void PersistWindowBounds(Guid accountId)
+    {
+        if (!_liveBounds.Remove(accountId, out var b)) return;
+        var vm = Accounts.FirstOrDefault(a => a.Model.Id == accountId);
+        if (vm is null) return;
+        vm.Model.WindowBounds = b;
+        _ = _vault.SaveAsync();
     }
 
     // ---------------- Filtering / groups ----------------
@@ -662,6 +704,37 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand] private void ShowList() => IsGridView = false;
     [RelayCommand] private void ShowGrid() => IsGridView = true;
 
+    // ---------------- Game history ----------------
+
+    private void RecordGameHistory(IEnumerable<long> placeIds)
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var pid in placeIds.Where(p => p > 0).Distinct())
+        {
+            var e = _settings.GameHistory.FirstOrDefault(g => g.PlaceId == pid);
+            if (e is null) { e = new GameHistoryEntry { PlaceId = pid }; _settings.GameHistory.Add(e); }
+            e.LastPlayed = now;
+            e.LaunchCount++;
+        }
+        _settings.GameHistory = _settings.GameHistory.OrderByDescending(g => g.LastPlayed).Take(200).ToList();
+        _settings.Save();
+    }
+
+    [RelayCommand]
+    private void OpenGameHistory()
+    {
+        string? cookie = null;
+        foreach (var a in Accounts) { try { cookie = _vault.GetCookie(a.Model); break; } catch { /* skip unreadable */ } }
+
+        _dialogs.OpenGameHistory(_settings.GameHistory, _api, cookie,
+            onUse: pid => { PlaceInput = pid.ToString(); StatusMessage = $"Launch game set to place {pid}."; },
+            onClose: removed =>
+            {
+                if (removed.Count > 0) _settings.GameHistory.RemoveAll(g => removed.Contains(g.PlaceId));
+                _settings.Save(); // also persists any game names resolved while the window was open
+            });
+    }
+
     [RelayCommand]
     private void OpenSettings()
     {
@@ -773,6 +846,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
         OnPropertyChanged(nameof(MultiInstanceActive));
+
+        RecordGameHistory(targets.Values.Select(t => t.PlaceId));
 
         IsLaunching = true;
         _launchCts = new CancellationTokenSource();
@@ -918,6 +993,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _boundsPoll.Stop();
         _autoValidate.Stop();
         _clipboardClear?.Stop();
         _launchCts?.Cancel();

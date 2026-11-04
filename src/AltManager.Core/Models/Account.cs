@@ -37,6 +37,8 @@ public sealed class Account
     public string GameOverride { get; set; } = "";
     public string Notes { get; set; } = "";
     public bool Favorite { get; set; }
+    /// <summary>Last game-client window position/size for this account; restored on the next launch.</summary>
+    public SavedWindowBounds? WindowBounds { get; set; }
     public AccountStatus Status { get; set; } = AccountStatus.Unknown;
     public DateTimeOffset? LastValidated { get; set; }
     public DateTimeOffset Added { get; init; } = DateTimeOffset.UtcNow;
@@ -58,3 +60,12 @@ public sealed record LaunchTarget(
 }
 
 public sealed record AuthenticatedUser(long Id, string Name, string DisplayName);
+
+/// <summary>A game-client window's position and size in physical pixels.</summary>
+public sealed class SavedWindowBounds
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+}

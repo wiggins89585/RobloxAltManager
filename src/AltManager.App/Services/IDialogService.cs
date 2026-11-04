@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using AltManager.App.Views;
 using AltManager.Core;
+using AltManager.Core.Roblox;
 
 namespace AltManager.App.Services;
 
@@ -23,6 +24,9 @@ public interface IDialogService
     bool EditSettings(AppSettings settings);
     /// <summary>Opens roblox.com in a browser window signed in as this account (non-modal).</summary>
     void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId);
+    /// <summary>Opens the game-history window (non-modal). onClose reports removed place ids.</summary>
+    void OpenGameHistory(IReadOnlyList<GameHistoryEntry> history, RobloxApiClient api, string? cookie,
+                         Action<long> onUse, Action<IReadOnlyList<long>> onClose);
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
@@ -100,6 +104,14 @@ public sealed class DialogService : IDialogService
 
     public void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId) =>
         new RobloxBrowserWindow(cookie, profileKey, label, userId).Show(); // non-modal: keep using the app
+
+    public void OpenGameHistory(IReadOnlyList<GameHistoryEntry> history, RobloxApiClient api, string? cookie,
+                                Action<long> onUse, Action<IReadOnlyList<long>> onClose)
+    {
+        var w = new GameHistoryWindow(history, api, cookie, onUse) { Owner = Owner };
+        w.Closed += (_, _) => onClose(w.RemovedPlaceIds);
+        w.Show();
+    }
 
     private static System.Windows.Media.Brush Brush(string hex) =>
         (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;

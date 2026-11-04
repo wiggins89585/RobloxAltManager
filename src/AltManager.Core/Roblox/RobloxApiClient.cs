@@ -155,6 +155,49 @@ public sealed class RobloxApiClient : IDisposable
         return result;
     }
 
+    /// <summary>Batch game-icon lookup by place id. Returns placeId → image URL.</summary>
+    public async Task<Dictionary<long, string>> GetPlaceIconsAsync(IEnumerable<long> placeIds, CancellationToken ct = default)
+    {
+        var result = new Dictionary<long, string>();
+        foreach (var chunk in placeIds.Distinct().Chunk(100))
+        {
+            var url = "https://thumbnails.roblox.com/v1/places/gameicons" +
+                      $"?placeIds={string.Join(',', chunk)}&size=150x150&format=Png&isCircular=false";
+            try
+            {
+                var dto = await _http.GetFromJsonAsync<ThumbResponse>(url, ct);
+                if (dto?.Data is null) continue;
+                foreach (var t in dto.Data)
+                    if (t.State == "Completed" && t.ImageUrl is not null)
+                        result[t.TargetId] = t.ImageUrl;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { /* leave missing */ }
+        }
+        return result;
+    }
+
+    /// <summary>Resolves place ids to their game names (needs an authenticated cookie). placeId → name.</summary>
+    public async Task<Dictionary<long, string>> GetPlaceNamesAsync(IEnumerable<long> placeIds, string cookie, CancellationToken ct = default)
+    {
+        var result = new Dictionary<long, string>();
+        foreach (var chunk in placeIds.Distinct().Chunk(50))
+        {
+            var query = string.Join("&", chunk.Select(id => $"placeIds={id}"));
+            using var req = Build(HttpMethod.Get, $"https://games.roblox.com/v1/games/multiget-place-details?{query}", cookie);
+            try
+            {
+                using var res = await _http.SendAsync(req, ct);
+                if (!res.IsSuccessStatusCode) continue;
+                var dto = await res.Content.ReadFromJsonAsync<List<PlaceDetailDto>>(cancellationToken: ct);
+                if (dto is null) continue;
+                foreach (var d in dto)
+                    if (d.Name is not null) result[d.PlaceId] = d.Name;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { /* leave missing */ }
+        }
+        return result;
+    }
+
     // ---------- Private server share links ----------
 
     /// <summary>
@@ -253,6 +296,10 @@ public sealed class RobloxApiClient : IDisposable
         [property: JsonPropertyName("linkCode")] string? LinkCode);
 
     private sealed record ThumbResponse([property: JsonPropertyName("data")] List<ThumbDto>? Data);
+
+    private sealed record PlaceDetailDto(
+        [property: JsonPropertyName("placeId")] long PlaceId,
+        [property: JsonPropertyName("name")] string? Name);
 
     private sealed record ThumbDto(
         [property: JsonPropertyName("targetId")] long TargetId,

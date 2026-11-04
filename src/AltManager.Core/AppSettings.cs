@@ -13,6 +13,15 @@ public sealed class LaunchPreset
     public string PrivateServerLinkCode { get; set; } = "";
 }
 
+/// <summary>A game the user has launched, for the game-history view.</summary>
+public sealed class GameHistoryEntry
+{
+    public long PlaceId { get; set; }
+    public string Name { get; set; } = "";
+    public DateTimeOffset LastPlayed { get; set; }
+    public int LaunchCount { get; set; }
+}
+
 /// <summary>
 /// Non-secret app preferences, stored in plaintext next to the vault. Nothing here is
 /// sensitive (no cookies/passwords) — those stay in the encrypted vault.
@@ -51,6 +60,7 @@ public sealed class AppSettings
     public string CustomUserAgent { get; set; } = "";
 
     public List<LaunchPreset> Presets { get; set; } = new();
+    public List<GameHistoryEntry> GameHistory { get; set; } = new();
 
     // ---------------- Persistence ----------------
 
