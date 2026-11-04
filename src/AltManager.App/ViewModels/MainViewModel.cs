@@ -667,6 +667,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (!_dialogs.EditSettings(_settings)) return;
         CustomUserAgent = _settings.CustomUserAgent;
+        if (Application.Current.MainWindow is Window mainWindow)
+            mainWindow.Topmost = _settings.AlwaysOnTop;
         ApplyStreamerMode(_settings.StreamerMode);
         ConfigureAutoValidate();
         OnPropertyChanged(nameof(CardWidth));

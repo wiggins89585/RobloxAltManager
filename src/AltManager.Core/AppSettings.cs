@@ -22,6 +22,10 @@ public sealed class AppSettings
     // Updates
     public bool AutoUpdateEnabled { get; set; } = true;
 
+    // Startup / window
+    public bool LaunchOnWindowsStartup { get; set; }
+    public bool AlwaysOnTop { get; set; }
+
     // Account health
     public bool AutoValidateOnStartup { get; set; }
     public int AutoValidateIntervalMinutes { get; set; }   // 0 = off

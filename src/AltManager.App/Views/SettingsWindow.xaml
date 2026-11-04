@@ -6,6 +6,14 @@
         Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
     <StackPanel Margin="16">
 
+        <TextBlock Text="STARTUP" Style="{StaticResource Heading}"/>
+        <CheckBox x:Name="LaunchOnStartup" Content="Load Alt Manager when I sign in to Windows"
+                  Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
+        <CheckBox x:Name="AlwaysOnTop" Content="Keep the app window on top of other windows"
+                  Margin="0,4,0,4" Foreground="{StaticResource Fg}"/>
+
+        <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
+
         <TextBlock Text="ACCOUNT HEALTH" Style="{StaticResource Heading}"/>
         <CheckBox x:Name="AutoStartup" Content="Re-check all accounts on startup" Margin="0,8,0,4" Foreground="{StaticResource Fg}"/>
         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">

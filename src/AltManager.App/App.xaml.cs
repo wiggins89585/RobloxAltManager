@@ -49,7 +49,7 @@ public partial class App : Application
 
         var settings = AppSettings.Load();
         _vm = new MainViewModel(vault, new RobloxApiClient(), new ProcessTracker(), guard, new DialogService(), settings);
-        var window = new MainWindow { DataContext = _vm };
+        var window = new MainWindow { DataContext = _vm, Topmost = settings.AlwaysOnTop };
         if (settings.RememberView && settings is { WindowWidth: >= 820, WindowHeight: >= 420 })
         {
             window.Width = settings.WindowWidth;

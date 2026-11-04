@@ -8,6 +8,8 @@ Download the Windows x64 package from [GitHub Releases](../../releases/latest). 
 
 Release builds check GitHub Releases at startup and ask before downloading and installing a newer version. The setting is enabled by default and can be changed under **Settings → Updates**. Updates verify the published SHA-256 digest, confirm the installed version before restarting, and require write access to the install folder. Version 1.0.0 cannot update itself; install version 1.0.1 once to enable automatic updates.
 
+Settings also include an option to launch Alt Manager when you sign in to Windows and an option to keep its window on top of other windows.
+
 ## Build
 
 Build requirements: Windows 10 1809 or newer and the .NET 8 SDK. Running the app also requires the WebView2 Runtime (already on Windows 11).

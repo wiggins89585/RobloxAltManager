@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security;
 using System.Windows;
 using AltManager.Core;
 using AltManager.Core.Vault;
@@ -14,6 +15,8 @@ public partial class SettingsWindow : Window
     {
         _s = settings;
         InitializeComponent();
+        LaunchOnStartup.IsChecked = _s.LaunchOnWindowsStartup;
+        AlwaysOnTop.IsChecked = _s.AlwaysOnTop;
         AutoUpdate.IsChecked = _s.AutoUpdateEnabled;
         AutoStartup.IsChecked = _s.AutoValidateOnStartup;
         Interval.Text = _s.AutoValidateIntervalMinutes.ToString();
@@ -27,6 +30,20 @@ public partial class SettingsWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
+        var launchOnStartup = LaunchOnStartup.IsChecked == true;
+        try
+        {
+            SetLaunchOnWindowsStartup(launchOnStartup);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
+        {
+            MessageBox.Show(this, "Could not update the Windows startup setting: " + ex.Message,
+                "Settings", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _s.LaunchOnWindowsStartup = launchOnStartup;
+        _s.AlwaysOnTop = AlwaysOnTop.IsChecked == true;
         _s.AutoUpdateEnabled = AutoUpdate.IsChecked == true;
         _s.AutoValidateOnStartup = AutoStartup.IsChecked == true;
         _s.AutoValidateIntervalMinutes = ParseClamp(Interval.Text, 0, 0, 1440);
@@ -38,6 +55,24 @@ public partial class SettingsWindow : Window
         _s.CustomUserAgent = UserAgent.Text.Trim();
         _s.Save();
         DialogResult = true;
+    }
+
+    private static void SetLaunchOnWindowsStartup(bool enabled)
+    {
+        using var runKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run")
+            ?? throw new IOException("Could not open the current-user startup registry key.");
+        if (!enabled)
+        {
+            runKey.DeleteValue("RobloxAltManager", throwOnMissingValue: false);
+            return;
+        }
+
+        var executable = Environment.ProcessPath
+            ?? throw new IOException("Could not determine the application executable path.");
+        var passwordVault = Environment.GetCommandLineArgs().Skip(1)
+            .Contains("--password-vault", StringComparer.OrdinalIgnoreCase);
+        var command = $"\"{executable}\"" + (passwordVault ? " --password-vault" : "");
+        runKey.SetValue("RobloxAltManager", command);
     }
 
     private void Export_Click(object sender, RoutedEventArgs e)
