@@ -372,7 +372,7 @@
                           MinRowHeight="42" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
                           SelectionMode="Extended" FontSize="12"
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          Background="{DynamicResource Panel}" RowBackground="{DynamicResource Panel}"
+                          Background="Transparent" RowBackground="Transparent"
                           Foreground="{DynamicResource Fg}" BorderThickness="0">
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">

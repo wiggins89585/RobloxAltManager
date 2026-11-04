@@ -64,12 +64,12 @@ public static class Theme
         // buttons and bright glass edges — so the acrylic blur shows through the whole UI.
         if (t.Name == "Liquid Glass")
         {
-            app.Resources["Bg"]     = Solid("#63EDF4FD");               // translucent base (toolbars, inputs)
-            app.Resources["Panel"]  = VGrad("#82FFFFFF", "#4DFFFFFF");   // frosted gradient surface
-            app.Resources["Raised"] = VGrad("#A6FFFFFF", "#5CFFFFFF");   // glossy glass button
-            app.Resources["Hover"]  = Solid("#C7FFFFFF");
-            app.Resources["Line"]   = Solid("#B3FFFFFF");               // bright glass edge
-            app.Resources["Selection"] = Solid("#9CC2DAFB");
+            app.Resources["Bg"]     = Solid("#38EDF4FD");               // very translucent base (toolbars, inputs)
+            app.Resources["Panel"]  = VGrad("#4FFFFFFF", "#26FFFFFF");   // see-through frosted surface
+            app.Resources["Raised"] = VGrad("#8CFFFFFF", "#47FFFFFF");   // glossy glass button (kept readable)
+            app.Resources["Hover"]  = Solid("#B3FFFFFF");
+            app.Resources["Line"]   = Solid("#8CFFFFFF");               // soft glass edge
+            app.Resources["Selection"] = Solid("#80B6D2FB");
         }
 
         // Title bar gets a theme-specific treatment (gradients for XP / Aero / Glass) so the top of

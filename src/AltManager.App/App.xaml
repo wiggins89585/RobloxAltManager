@@ -359,7 +359,7 @@
         </Style>
         <!-- Rows highlight by the account's checkbox (IsSelected on the view-model), not grid selection. -->
         <Style TargetType="DataGridRow">
-            <Setter Property="Background" Value="{DynamicResource Panel}"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
