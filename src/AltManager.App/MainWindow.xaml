@@ -294,14 +294,15 @@
                                                    Visibility="{Binding Favorite, Converter={StaticResource BoolVis}}"/>
                                         <Grid DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,8,0" VerticalAlignment="Top"
                                               ToolTip="{Binding PresenceText}">
-                                            <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
-                                                    Background="{StaticResource Raised}">
-                                                <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
-                                            </Border>
-                                            <Border Width="14" Height="14" CornerRadius="7" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                    Background="{StaticResource Panel}">
-                                                <Ellipse Width="9" Height="9" Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
-                                            </Border>
+                                            <Ellipse Width="40" Height="40" Fill="{StaticResource Raised}"/>
+                                            <Ellipse Width="40" Height="40">
+                                                <Ellipse.Fill>
+                                                    <ImageBrush ImageSource="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <Ellipse Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                     Stroke="{StaticResource Panel}" StrokeThickness="2"
+                                                     Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
                                         </Grid>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
@@ -354,14 +355,16 @@
                         <DataGridTemplateColumn Header="" Width="40">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
-                                    <Grid Width="30" Height="30" ToolTip="{Binding PresenceText}">
-                                        <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Background="{StaticResource Raised}">
-                                            <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
-                                        </Border>
-                                        <Border Width="11" Height="11" CornerRadius="6" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                Background="{StaticResource Panel}">
-                                            <Ellipse Width="7" Height="7" Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
-                                        </Border>
+                                    <Grid Width="34" Height="34" ToolTip="{Binding PresenceText}">
+                                        <Ellipse Width="30" Height="30" Fill="{StaticResource Raised}"/>
+                                        <Ellipse Width="30" Height="30">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+                                        <Ellipse Width="11" Height="11" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                 Stroke="{StaticResource Panel}" StrokeThickness="2"
+                                                 Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
                                     </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
