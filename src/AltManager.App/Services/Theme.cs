@@ -59,9 +59,47 @@ public static class Theme
         Set(app, "Muted", t.Muted);
         Set(app, "Selection", t.Selection);
 
+        // Title bar gets a theme-specific treatment (gradients for XP / Aero / Glass) so the top of
+        // the app reads as the theme it's named after.
+        app.Resources["TitleBar"] = BuildTitleBar(t);
+        app.Resources["TitleBarText"] = new SolidColorBrush(TitleBarText(t));
+
         var accent = TryParseColor(accentOverride, out _) && !string.IsNullOrWhiteSpace(accentOverride)
             ? accentOverride! : t.Accent;
         ApplyAccent(accent);
+    }
+
+    private static Brush BuildTitleBar(ThemePreset t) => t.Name switch
+    {
+        "Windows XP"    => VGrad("#3F8CEA", "#245EDC", "#1941A5"),   // Luna blue
+        "Frutiger Aero" => VGrad("#86E3F7", "#28A9DD", "#1687C4"),   // glossy sky
+        "Liquid Glass"  => VGrad("#FFFFFF", "#EEF4FC", "#DCE7F6"),   // frosted light
+        "macOS"         => Solid("#E6E6E8"),
+        "Light"         => Solid("#E7E9EC"),
+        _               => Solid(t.Bg),                             // dark themes: flat
+    };
+
+    private static Color TitleBarText(ThemePreset t)
+    {
+        // White on the saturated bars, otherwise the theme's own foreground.
+        if (t.Name is "Windows XP" or "Frutiger Aero") return Colors.White;
+        TryParseColor(t.Fg, out var c);
+        return c;
+    }
+
+    private static LinearGradientBrush VGrad(params string[] hex)
+    {
+        var b = new LinearGradientBrush { StartPoint = new System.Windows.Point(0, 0), EndPoint = new System.Windows.Point(0, 1) };
+        for (var i = 0; i < hex.Length; i++)
+            if (TryParseColor(hex[i], out var c))
+                b.GradientStops.Add(new GradientStop(c, hex.Length == 1 ? 0 : (double)i / (hex.Length - 1)));
+        return b;
+    }
+
+    private static SolidColorBrush Solid(string hex)
+    {
+        TryParseColor(hex, out var c);
+        return new SolidColorBrush(c);
     }
 
     /// <summary>Replaces only the accent brushes (used for the live accent preview).</summary>

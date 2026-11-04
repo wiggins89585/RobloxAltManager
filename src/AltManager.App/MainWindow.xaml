@@ -27,67 +27,72 @@
         <!-- Shared by list rows and grid cards. The host's Tag holds the MainViewModel (menus live outside the
              visual tree, so they can't find the window); the menu's DataContext is the account itself. -->
         <ContextMenu x:Key="AccountMenu" x:Shared="False">
-            <TextBlock Text="ACCOUNT" Style="{StaticResource MenuHeader}"/>
             <MenuItem Header="🌐  Open in browser" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.OpenBrowserCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="↻  Re-check status" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.RecheckAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="🔑  Re-login" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.ReloginAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="★  Toggle favorite" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="✎  Edit note…" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.EditNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="🏷  Edit tags…" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.EditTagsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="⌸  Set group…" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.SetGroupForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="⇄  Set proxy…" CommandParameter="{Binding}"
-                      ToolTip="Route this account's web-API calls (validation / launch auth) through a proxy"
-                      Command="{Binding PlacementTarget.Tag.SetProxyForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="▲  Move up" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="▼  Move down" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <Separator/>
-            <TextBlock Text="COPY" Style="{StaticResource MenuHeader}"/>
-            <MenuItem Header="user:pass" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
-                      Command="{Binding PlacementTarget.Tag.CopyUserPassCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Username" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.CopyUsernameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Password" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
-                      Command="{Binding PlacementTarget.Tag.CopyPasswordCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Roblox ID" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.CopyUserIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Profile link" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.CopyProfileLinkCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <Separator/>
-            <TextBlock Text="GAME" Style="{StaticResource MenuHeader}"/>
-            <MenuItem Header="Use launch game ID" CommandParameter="{Binding}"
-                      ToolTip="Sets this account (or every checked account) to the game ID in the Launch panel"
-                      Command="{Binding PlacementTarget.Tag.UseLaunchGameForAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Clear own game" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.ClearAccountGameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <Separator/>
-            <TextBlock Text="ACCOUNT" Style="{StaticResource MenuHeader}"/>
-            <MenuItem Header="↻  Refresh info (Robux / Premium / age)" CommandParameter="{Binding}"
+            <MenuItem Header="↻  Refresh info" CommandParameter="{Binding}"
+                      ToolTip="Robux / Premium / account age"
                       Command="{Binding PlacementTarget.Tag.RefreshInfoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="👥  Join Roblox group…" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.JoinGroupCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="💸  Give group Robux…" CommandParameter="{Binding}"
-                      ToolTip="Pay Robux from a group you own to the selected accounts"
-                      Command="{Binding PlacementTarget.Tag.GroupPayoutCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="🎁  Redeem promo code…" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.RedeemPromoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="👕  Wear outfit…" CommandParameter="{Binding}"
-                      Command="{Binding PlacementTarget.Tag.WearOutfitCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
-            <TextBlock Text="2-STEP VERIFICATION" Style="{StaticResource MenuHeader}"/>
-            <MenuItem Header="🔐  Set 2FA secret…" CommandParameter="{Binding}"
-                      ToolTip="Store the authenticator key so logins answer 2-step automatically"
-                      Command="{Binding PlacementTarget.Tag.SetTotpSecretCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-            <MenuItem Header="Copy 2FA code" CommandParameter="{Binding}" IsEnabled="{Binding HasTotp}"
-                      Command="{Binding PlacementTarget.Tag.CopyTotpCodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+            <MenuItem Header="Copy">
+                <MenuItem Header="user:pass" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
+                          Command="{Binding PlacementTarget.Tag.CopyUserPassCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Username" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.CopyUsernameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Password" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
+                          Command="{Binding PlacementTarget.Tag.CopyPasswordCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Roblox ID" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.CopyUserIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Profile link" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.CopyProfileLinkCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator/>
+                <MenuItem Header="2FA code" CommandParameter="{Binding}" IsEnabled="{Binding HasTotp}"
+                          Command="{Binding PlacementTarget.Tag.CopyTotpCodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </MenuItem>
+
+            <MenuItem Header="Edit">
+                <MenuItem Header="★  Toggle favorite" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="✎  Note…" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.EditNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="🏷  Tags…" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.EditTagsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="⌸  Set group…" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.SetGroupForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="⇄  Set proxy…" CommandParameter="{Binding}"
+                          ToolTip="Route this account's web-API calls (validation / launch auth) through a proxy"
+                          Command="{Binding PlacementTarget.Tag.SetProxyForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="🔐  Set 2FA secret…" CommandParameter="{Binding}"
+                          ToolTip="Store the authenticator key so logins answer 2-step automatically"
+                          Command="{Binding PlacementTarget.Tag.SetTotpSecretCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator/>
+                <MenuItem Header="▲  Move up" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="▼  Move down" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </MenuItem>
+
+            <MenuItem Header="Game &amp; groups">
+                <MenuItem Header="Use launch game ID" CommandParameter="{Binding}"
+                          ToolTip="Sets this account (or every checked account) to the game ID in the Launch panel"
+                          Command="{Binding PlacementTarget.Tag.UseLaunchGameForAccountCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Clear own game" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.ClearAccountGameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator/>
+                <MenuItem Header="👥  Join Roblox group…" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.JoinGroupCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="💸  Give group Robux…" CommandParameter="{Binding}"
+                          ToolTip="Pay Robux from a group you own to the selected accounts"
+                          Command="{Binding PlacementTarget.Tag.GroupPayoutCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="🎁  Redeem promo code…" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.RedeemPromoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="👕  Wear outfit…" CommandParameter="{Binding}"
+                          Command="{Binding PlacementTarget.Tag.WearOutfitCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </MenuItem>
         </ContextMenu>
     </Window.Resources>
 
@@ -113,7 +118,7 @@
     <Grid>
     <DockPanel>
         <!-- ================= Title bar + toolbar ================= -->
-        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg}" Height="36">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource TitleBar}" Height="36">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Minimize"/>
@@ -123,9 +128,10 @@
 
                 <Image Source="/Assets/RobloxAltManager.png" Width="32" Height="32" Margin="6,0,0,0"
                        Stretch="Uniform" VerticalAlignment="Center"/>
-                <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"/>
+                <TextBlock Text="Alt Manager" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="8,0,14,0"
+                           Foreground="{DynamicResource TitleBarText}"/>
                 <TextBlock x:Name="VersionText" FontSize="10" VerticalAlignment="Center" Margin="-10,0,12,0"
-                           Foreground="{DynamicResource Muted}"/>
+                           Foreground="{DynamicResource TitleBarText}" Opacity="0.75"/>
                 <!-- empty fill = draggable window area -->
                 <Border Background="Transparent"/>
             </DockPanel>

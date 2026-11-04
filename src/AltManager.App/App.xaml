@@ -23,6 +23,8 @@
         <SolidColorBrush x:Key="Accent" Color="#5865F2"/>
         <SolidColorBrush x:Key="AccentHover" Color="#4752C4"/>
         <SolidColorBrush x:Key="Selection" Color="#33386A"/>
+        <SolidColorBrush x:Key="TitleBar" Color="#1E1F22"/>
+        <SolidColorBrush x:Key="TitleBarText" Color="#DBDEE1"/>
 
         <!-- ===== ToggleButton: flat, rounded; accent when checked ===== -->
         <Style TargetType="ToggleButton">
@@ -112,7 +114,7 @@
         <!-- Title-bar caption buttons (min / max / close) -->
         <Style x:Key="CaptionButton" TargetType="Button">
             <Setter Property="Width" Value="44"/>
-            <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TitleBarText}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
             <Setter Property="FontSize" Value="10"/>
@@ -431,13 +433,31 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
                         <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="8,5">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Right" Text="{TemplateBinding InputGestureText}"
-                                           Foreground="{DynamicResource Muted}" Margin="16,0,0,0"/>
-                                <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
-                            </DockPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" ContentSource="Header" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="Gesture" Grid.Column="1" Text="{TemplateBinding InputGestureText}"
+                                           Foreground="{DynamicResource Muted}" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="Arrow" Grid.Column="1" Text="›" FontSize="14" Margin="16,0,0,0"
+                                           Foreground="{DynamicResource Muted}" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="-2" VerticalOffset="-5"
+                                       IsOpen="{TemplateBinding IsSubmenuOpen}" AllowsTransparency="True"
+                                       Focusable="False" PopupAnimation="Fade">
+                                    <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Line}"
+                                            BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="170" Margin="0,0,8,8">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                    </Border>
+                                </Popup>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="Gesture" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
                             <Trigger Property="IsHighlighted" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent}"/>
                                 <Setter Property="Foreground" Value="White"/>
