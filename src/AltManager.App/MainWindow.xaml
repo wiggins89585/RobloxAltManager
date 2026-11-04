@@ -85,6 +85,7 @@
 
     <Window.InputBindings>
         <KeyBinding Modifiers="Ctrl+Shift" Key="Q" Command="{Binding PanicCloseCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="L" Command="{Binding LockCommand}"/>
     </Window.InputBindings>
 
     <!-- Maximized borderless windows overhang the screen by the resize border; pad it back in. -->
@@ -101,6 +102,7 @@
             </Style>
         </Border.Style>
 
+    <Grid>
     <DockPanel>
         <!-- ================= Title bar + toolbar ================= -->
         <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" Height="36">
@@ -127,6 +129,8 @@
                             ToolTip="Scheduled launches"/>
                     <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
                             ToolTip="Mask or show usernames and IDs"/>
+                    <Button Content="Lock" Command="{Binding LockCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Lock the app (Ctrl+L)"/>
                     <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
                             ToolTip="Open settings"/>
                 </StackPanel>
@@ -538,5 +542,26 @@
             </ScrollViewer>
         </Grid>
     </DockPanel>
+
+    <!-- ================= Lock overlay ================= -->
+    <Border x:Name="LockOverlay" Background="#F21E1F22" IsVisibleChanged="LockOverlay_IsVisibleChanged"
+            Visibility="{Binding IsLocked, Converter={StaticResource BoolVis}}">
+        <Border Background="{StaticResource Panel}" CornerRadius="10" Padding="24" Width="320"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                BorderBrush="{StaticResource Line}" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="🔒  Locked" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,12"
+                           Text="This session is locked."/>
+                <PasswordBox x:Name="UnlockBox" Margin="0,0,0,10" Padding="6,5" KeyDown="UnlockBox_KeyDown"
+                             Background="{StaticResource Bg}" Foreground="{StaticResource Fg}" CaretBrush="{StaticResource Fg}"
+                             Visibility="{Binding IsPasswordProtected, Converter={StaticResource BoolVis}}"/>
+                <Button Content="Unlock" Style="{StaticResource AccentButton}" Click="Unlock_Click"
+                        HorizontalAlignment="Center" Padding="26,5"/>
+                <TextBlock x:Name="UnlockError" Foreground="#F23F43" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+    </Border>
+    </Grid>
     </Border>
 </Window>

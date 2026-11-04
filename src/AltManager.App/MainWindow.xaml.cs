@@ -42,6 +42,28 @@ public partial class MainWindow : Window
             var pref = DWMWCP_ROUND;
             DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
         };
+
+        // Any input defers the idle auto-lock.
+        PreviewMouseMove += (_, _) => Vm?.ResetIdle();
+        PreviewMouseDown += (_, _) => Vm?.ResetIdle();
+        PreviewKeyDown += (_, _) => Vm?.ResetIdle();
+    }
+
+    private AltManager.App.ViewModels.MainViewModel? Vm => DataContext as AltManager.App.ViewModels.MainViewModel;
+
+    private void Unlock_Click(object sender, RoutedEventArgs e) => TryUnlock();
+    private void UnlockBox_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) TryUnlock(); }
+
+    private void TryUnlock()
+    {
+        if (Vm is null) return;
+        if (Vm.TryUnlock(UnlockBox.Password)) { UnlockBox.Clear(); UnlockError.Text = ""; }
+        else { UnlockError.Text = "Wrong password."; UnlockBox.SelectAll(); }
+    }
+
+    private void LockOverlay_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (LockOverlay.IsVisible) UnlockBox.Focus();
     }
 
     /// <summary>Clicking anywhere on an account row toggles its checkbox, except on the controls inside it.</summary>

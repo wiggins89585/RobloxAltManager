@@ -24,6 +24,7 @@ public partial class SettingsWindow : Window
         Streamer.IsChecked = _s.StreamerMode;
         ConfirmCopy.IsChecked = _s.ConfirmBeforeCopyPassword;
         ClipClear.Text = _s.ClipboardClearSeconds.ToString();
+        AutoLock.Text = _s.AutoLockMinutes.ToString();
         RememberView.IsChecked = _s.RememberView;
         CardWidth.Text = _s.CardWidth.ToString();
         UserAgent.Text = _s.CustomUserAgent;
@@ -52,6 +53,7 @@ public partial class SettingsWindow : Window
         _s.StreamerMode = Streamer.IsChecked == true;
         _s.ConfirmBeforeCopyPassword = ConfirmCopy.IsChecked == true;
         _s.ClipboardClearSeconds = ParseClamp(ClipClear.Text, 20, 0, 600);
+        _s.AutoLockMinutes = ParseClamp(AutoLock.Text, 0, 0, 1440);
         _s.RememberView = RememberView.IsChecked == true;
         _s.CardWidth = ParseClamp(CardWidth.Text, 165, 120, 320);
         _s.CustomUserAgent = UserAgent.Text.Trim();

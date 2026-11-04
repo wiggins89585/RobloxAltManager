@@ -40,6 +40,11 @@
             <TextBox x:Name="ClipClear" Width="48" Margin="8,0,6,0"/>
             <TextBlock Text="seconds after copying a password (0 = never)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
         </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+            <TextBlock Text="Auto-lock after" VerticalAlignment="Center" Foreground="{StaticResource Fg}"/>
+            <TextBox x:Name="AutoLock" Width="48" Margin="8,0,6,0"/>
+            <TextBlock Text="minutes idle (0 = off)" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+        </StackPanel>
 
         <Border Height="1" Background="{StaticResource Line}" Margin="0,14"/>
 

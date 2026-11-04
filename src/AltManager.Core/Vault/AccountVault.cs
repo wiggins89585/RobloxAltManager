@@ -1,3 +1,4 @@
+using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -113,6 +114,33 @@ public sealed class AccountVault : IDisposable
     }
 
     public bool Remove(Guid id) => _file.Accounts.RemoveAll(a => a.Id == id) > 0;
+
+    /// <summary>True when the vault is unlocked with a master password (AES), not DPAPI.</summary>
+    public bool IsPasswordProtected => _cipher.Id == "aesgcm";
+
+    /// <summary>Checks a typed master password against the vault (for re-unlock). DPAPI vaults return true.</summary>
+    public bool VerifyPassword(string password)
+    {
+        if (!IsPasswordProtected) return true;
+        if (_file.Salt is null) return false;
+        try
+        {
+            var salt = Convert.FromBase64String(_file.Salt);
+            using var sec = new SecureString();
+            foreach (var ch in password) sec.AppendChar(ch);
+            sec.MakeReadOnly();
+
+            var cipher = AesGcmCipher.FromPassword(sec, salt);
+            try
+            {
+                var check = cipher.Decrypt(Convert.FromBase64String(_file.Check), "check"u8);
+                try { return Encoding.UTF8.GetString(check) == CheckPlaintext; }
+                finally { CryptographicOperations.ZeroMemory(check); }
+            }
+            finally { (cipher as IDisposable)?.Dispose(); }
+        }
+        catch { return false; }
+    }
 
     public async Task SaveAsync()
     {

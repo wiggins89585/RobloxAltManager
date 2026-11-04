@@ -57,6 +57,7 @@ public sealed class AppSettings
     public bool StreamerMode { get; set; }
     public bool ConfirmBeforeCopyPassword { get; set; } = true;
     public int ClipboardClearSeconds { get; set; } = 20;   // 0 = never clear
+    public int AutoLockMinutes { get; set; }               // 0 = off
 
     // View / layout (remembered between sessions)
     public bool RememberView { get; set; } = true;

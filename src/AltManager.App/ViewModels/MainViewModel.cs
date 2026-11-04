@@ -119,6 +119,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _scheduleTimer.Interval = TimeSpan.FromSeconds(30);
         _scheduleTimer.Tick += (_, _) => CheckSchedules();
         _scheduleTimer.Start();
+
+        _idleTimer.Interval = TimeSpan.FromSeconds(20);
+        _idleTimer.Tick += (_, _) => CheckIdleLock();
+        _idleTimer.Start();
     }
 
     // ---------------- Presence (online / in-game dots) ----------------
@@ -885,6 +889,39 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand] private void ShowList() => IsGridView = false;
     [RelayCommand] private void ShowGrid() => IsGridView = true;
 
+    // ---------------- Vault lock ----------------
+
+    [ObservableProperty] private bool _isLocked;
+    public bool IsPasswordProtected => _vault.IsPasswordProtected;
+
+    private readonly DispatcherTimer _idleTimer = new();
+    private DateTime _lastActivity = DateTime.UtcNow;
+
+    /// <summary>Called on any user input in the window, to defer the idle auto-lock.</summary>
+    public void ResetIdle() => _lastActivity = DateTime.UtcNow;
+
+    [RelayCommand]
+    private void Lock()
+    {
+        if (!IsLocked) { IsLocked = true; StatusMessage = "Locked."; }
+    }
+
+    /// <summary>Verifies the master password and unlocks (DPAPI vaults accept any input).</summary>
+    public bool TryUnlock(string password)
+    {
+        if (!_vault.VerifyPassword(password)) return false;
+        IsLocked = false;
+        ResetIdle();
+        StatusMessage = "Unlocked.";
+        return true;
+    }
+
+    private void CheckIdleLock()
+    {
+        if (_settings.AutoLockMinutes <= 0 || IsLocked) return;
+        if ((DateTime.UtcNow - _lastActivity).TotalMinutes >= _settings.AutoLockMinutes) Lock();
+    }
+
     // ---------------- Activity log / notifications ----------------
 
     public ObservableCollection<ActivityEntry> Activity { get; } = new();
@@ -1338,6 +1375,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _boundsPoll.Stop();
         _presencePoll.Stop();
         _scheduleTimer.Stop();
+        _idleTimer.Stop();
         _autoValidate.Stop();
         _clipboardClear?.Stop();
         _launchCts?.Cancel();
