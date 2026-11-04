@@ -103,6 +103,13 @@ public partial class AccountViewModel : ObservableObject
     public bool HasProxy => !string.IsNullOrWhiteSpace(Model.Proxy);
     public void RefreshProxy() => OnPropertyChanged(nameof(HasProxy));
 
+    /// <summary>Manual sort position (used in "Manual order" mode).</summary>
+    public int Order
+    {
+        get => Model.SortOrder;
+        set { if (Model.SortOrder != value) { Model.SortOrder = value; OnPropertyChanged(); } }
+    }
+
     // ---- Cached account info (Refresh info) ----
     public string RobuxText => Model.Robux is { } r ? r.ToString("N0") : "—";
     public string PremiumText => Model.Premium is true ? "Premium" : Model.Premium is false ? "—" : "?";

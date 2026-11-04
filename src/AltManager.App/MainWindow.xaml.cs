@@ -79,10 +79,16 @@ public partial class MainWindow : Window
         if (LockOverlay.IsVisible) UnlockBox.Focus();
     }
 
+    private Point _dragStart;
+    private bool _dragArmed;
+
     /// <summary>Clicking anywhere on an account row toggles its checkbox, except on the controls inside it.</summary>
     private void Row_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is not DataGridRow { DataContext: AccountViewModel vm }) return;
+
+        _dragStart = e.GetPosition(null);
+        _dragArmed = true;
 
         for (var d = e.OriginalSource as DependencyObject; d is not null && d != sender; d = ParentOf(d))
         {
@@ -92,6 +98,29 @@ public partial class MainWindow : Window
 
         vm.IsSelected = !vm.IsSelected;
         e.Handled = true;
+    }
+
+    /// <summary>In manual-order mode, dragging a row past the threshold starts a reorder drag.</summary>
+    private void Row_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_dragArmed || e.LeftButton != MouseButtonState.Pressed) return;
+        if (Vm is not { ManualOrder: true }) return;
+        if (sender is not DataGridRow { Item: AccountViewModel vm } row) return;
+
+        var p = e.GetPosition(null);
+        if (Math.Abs(p.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(p.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+        _dragArmed = false;
+        DragDrop.DoDragDrop(row, vm, DragDropEffects.Move);
+    }
+
+    /// <summary>Drops a dragged row onto this one, reordering the list.</summary>
+    private void Row_Drop(object sender, DragEventArgs e)
+    {
+        if (sender is DataGridRow { Item: AccountViewModel target } &&
+            e.Data.GetData(typeof(AccountViewModel)) is AccountViewModel moved)
+            Vm?.ReorderTo(moved, target);
     }
 
     private static DependencyObject? ParentOf(DependencyObject d) =>

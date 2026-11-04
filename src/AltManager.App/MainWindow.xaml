@@ -45,6 +45,10 @@
             <MenuItem Header="⇄  Set proxy…" CommandParameter="{Binding}"
                       ToolTip="Route this account's web-API calls (validation / launch auth) through a proxy"
                       Command="{Binding PlacementTarget.Tag.SetProxyForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="▲  Move up" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="▼  Move down" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <TextBlock Text="COPY" Style="{StaticResource MenuHeader}"/>
             <MenuItem Header="user:pass" CommandParameter="{Binding}" IsEnabled="{Binding HasPassword}"
@@ -209,6 +213,10 @@
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                     <Button DockPanel.Dock="Right" Content="Select / clear visible" Margin="4,0,0,0"
                             Command="{Binding SelectAllVisibleCommand}"/>
+                    <ToggleButton DockPanel.Dock="Right" Content="⇅ Manual" Margin="4,0,0,0" Padding="8,2"
+                                  IsChecked="{Binding ManualOrder, Mode=OneWay}"
+                                  Command="{Binding ToggleManualOrderCommand}"
+                                  ToolTip="Manual order — drag rows (or right-click → Move up/down) to arrange them yourself"/>
 
                     <!-- Columns (grid view only) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0,0,0"
@@ -353,6 +361,9 @@
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                             <EventSetter Event="PreviewMouseLeftButtonDown" Handler="Row_PreviewMouseLeftButtonDown"/>
+                            <EventSetter Event="MouseMove" Handler="Row_MouseMove"/>
+                            <EventSetter Event="Drop" Handler="Row_Drop"/>
+                            <Setter Property="AllowDrop" Value="True"/>
                             <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"/>
                             <Setter Property="ContextMenu" Value="{StaticResource AccountMenu}"/>
                         </Style>

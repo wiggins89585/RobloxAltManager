@@ -66,6 +66,7 @@ public sealed class AppSettings
     public bool IsGridView { get; set; }
     public int CardColumns { get; set; }
     public int CardWidth { get; set; } = 165;
+    public bool ManualOrder { get; set; }   // list sorted by drag order instead of favourite/group/name
     public string LastGroup { get; set; } = "";
     public double WindowWidth { get; set; }
     public double WindowHeight { get; set; }

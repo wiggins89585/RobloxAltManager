@@ -86,9 +86,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
         AccountsView = CollectionViewSource.GetDefaultView(Accounts);
         AccountsView.Filter = o => o is AccountViewModel vm && MatchesFilter(vm);
-        AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Favorite), ListSortDirection.Descending));
-        AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Group), ListSortDirection.Ascending));
-        AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Label), ListSortDirection.Ascending));
+        _manualOrder = settings.ManualOrder;
+        ApplySort();
         RebuildGroups(); // after AccountsView exists: it may change SelectedGroup → Refresh()
         if (settings.RememberView && Groups.Contains(settings.LastGroup)) SelectedGroup = settings.LastGroup;
 
@@ -892,6 +891,87 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             if (string.IsNullOrWhiteSpace(a.Model.Proxy)) continue;
             try { _api.SetProxy(_vault.GetCookie(a.Model), a.Model.Proxy); } catch { /* best effort */ }
         }
+    }
+
+    // ---------------- Manual order (drag to reorder) ----------------
+
+    [ObservableProperty] private bool _manualOrder;
+
+    partial void OnManualOrderChanged(bool value)
+    {
+        _settings.ManualOrder = value;
+        _settings.Save();
+        if (value) SeedOrderIfNeeded();
+        ApplySort();
+        StatusMessage = value
+            ? "Manual order on — drag rows to reorder (or right-click → Move up/down)."
+            : "Sorting by favourite, then group, then name.";
+    }
+
+    /// <summary>Sets the view's sort: manual drag order, or the default favourite/group/name.</summary>
+    private void ApplySort()
+    {
+        using (AccountsView.DeferRefresh())
+        {
+            AccountsView.SortDescriptions.Clear();
+            if (ManualOrder)
+            {
+                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Order), ListSortDirection.Ascending));
+            }
+            else
+            {
+                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Favorite), ListSortDirection.Descending));
+                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Group), ListSortDirection.Ascending));
+                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Label), ListSortDirection.Ascending));
+            }
+        }
+    }
+
+    /// <summary>First time manual order is turned on, number rows by their current display order.</summary>
+    private void SeedOrderIfNeeded()
+    {
+        if (Accounts.Count == 0) return;
+        if (Accounts.Select(a => a.Order).Distinct().Count() > 1) return; // already seeded
+        var i = 0;
+        foreach (var a in AccountsView.Cast<AccountViewModel>().ToList()) a.Order = i++ * 10;
+        _ = _vault.SaveAsync();
+    }
+
+    [RelayCommand]
+    private void ToggleManualOrder() => ManualOrder = !ManualOrder;
+
+    /// <summary>Moves <paramref name="moved"/> to <paramref name="target"/>'s position and renumbers everyone.</summary>
+    public void ReorderTo(AccountViewModel moved, AccountViewModel target)
+    {
+        if (!ManualOrder || ReferenceEquals(moved, target)) return;
+        var all = Accounts.OrderBy(a => a.Order).ToList();
+        if (!all.Remove(moved)) return;
+        var to = all.IndexOf(target);
+        if (to < 0) return;
+        all.Insert(to, moved);
+        for (var k = 0; k < all.Count; k++) all[k].Order = k * 10;
+        AccountsView.Refresh();
+        _ = _vault.SaveAsync();
+    }
+
+    [RelayCommand]
+    private void MoveUp(AccountViewModel? vm) => Nudge(vm, -1);
+
+    [RelayCommand]
+    private void MoveDown(AccountViewModel? vm) => Nudge(vm, +1);
+
+    private void Nudge(AccountViewModel? vm, int dir)
+    {
+        if (vm is null) return;
+        if (!ManualOrder) { ManualOrder = true; }
+        var all = Accounts.OrderBy(a => a.Order).ToList();
+        var i = all.IndexOf(vm);
+        var j = i + dir;
+        if (i < 0 || j < 0 || j >= all.Count) return;
+        (all[i], all[j]) = (all[j], all[i]);
+        for (var k = 0; k < all.Count; k++) all[k].Order = k * 10;
+        AccountsView.Refresh();
+        _ = _vault.SaveAsync();
     }
 
     private void Copy(string text, string what)
