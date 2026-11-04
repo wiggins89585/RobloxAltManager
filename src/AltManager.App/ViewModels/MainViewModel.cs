@@ -75,8 +75,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         CustomUserAgent = settings.CustomUserAgent;
         IsGridView = settings.RememberView && settings.IsGridView;
         CardColumns = settings.CardColumns;
-        ShowGroups = !settings.RememberView || settings.ShowGroups;
-        ShowLaunch = !settings.RememberView || settings.ShowLaunch;
+        ShowGroups = true;   // sidebars are always shown (the hide toggles were removed)
+        ShowLaunch = true;
         AccountViewModel.Masked = settings.StreamerMode;
 
         foreach (var a in vault.Accounts) Add(a);
@@ -215,6 +215,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Search the real username even in streamer mode, so filtering still works.
         return vm.Model.Username.Contains(q, StringComparison.OrdinalIgnoreCase)
             || vm.Notes.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || vm.Model.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase))
             || vm.GameOverride.Contains(q, StringComparison.OrdinalIgnoreCase)
             || vm.UserId.ToString().Contains(q);
     }
@@ -810,6 +811,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var note = _dialogs.Prompt("Note", $"Note for {label}:", vm.Notes);
         if (note is null) return;
         foreach (var t in targets) t.Notes = note;
+        await _vault.SaveAsync();
+    }
+
+    [RelayCommand]
+    private async Task EditTagsAsync(AccountViewModel? vm)
+    {
+        if (vm is null) return;
+        var targets = TargetsFor(vm);
+        var label = targets.Count > 1 ? $"{targets.Count} account(s)" : vm.Label;
+        var input = _dialogs.Prompt("Tags", $"Comma-separated tags for {label}:", string.Join(", ", vm.Model.Tags));
+        if (input is null) return;
+        var tags = input.Split(',');
+        foreach (var t in targets) t.SetTags(tags);
         await _vault.SaveAsync();
     }
 

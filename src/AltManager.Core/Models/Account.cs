@@ -38,6 +38,7 @@ public sealed class Account
     /// <summary>Per-account game ID. Empty = use the Launch panel's game; older saved game links remain readable.</summary>
     public string GameOverride { get; set; } = "";
     public string Notes { get; set; } = "";
+    public List<string> Tags { get; set; } = new();
     public bool Favorite { get; set; }
     /// <summary>Last game-client window position/size for this account; restored on the next launch.</summary>
     public SavedWindowBounds? WindowBounds { get; set; }

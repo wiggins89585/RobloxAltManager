@@ -37,6 +37,8 @@
                       Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="✎  Edit note…" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.EditNoteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="🏷  Edit tags…" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.EditTagsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="⌸  Set group…" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.SetGroupForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
@@ -190,11 +192,6 @@
             <!-- ================= Accounts ================= -->
             <DockPanel Grid.Column="1">
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                    <ToggleButton DockPanel.Dock="Left" Style="{StaticResource PanelToggle}" Content="Groups" Margin="0,0,4,0"
-                                  IsChecked="{Binding ShowGroups}" ToolTip="Show/hide the groups sidebar"/>
-                    <ToggleButton DockPanel.Dock="Left" Style="{StaticResource PanelToggle}" Content="Launch" Margin="0,0,8,0"
-                                  IsChecked="{Binding ShowLaunch}" ToolTip="Show/hide the launch sidebar"/>
-
                     <Button DockPanel.Dock="Right" Content="Select / clear visible" Margin="4,0,0,0"
                             Command="{Binding SelectAllVisibleCommand}"/>
 
@@ -222,8 +219,23 @@
                               ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}"
                               ToolTip="Show only accounts with this status"/>
 
-                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             ToolTip="Filter by username, note, game ID, or user ID"/>
+                    <Grid>
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Filter by username, note, tag, game ID, or user ID"/>
+                        <TextBlock Text="Search accounts…" Foreground="{StaticResource Muted}" IsHitTestVisible="False"
+                                   VerticalAlignment="Center" Margin="8,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SearchText}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
                 </DockPanel>
 
                 <Grid>
@@ -363,6 +375,9 @@
                                         <TextBlock Foreground="{StaticResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis">
                                             <Run Text="ID"/> <Run Text="{Binding UserIdText, Mode=OneWay}"/>
                                         </TextBlock>
+                                        <TextBlock Text="{Binding TagsText}" Foreground="{StaticResource Accent}" FontSize="10"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Visibility="{Binding HasTags, Converter={StaticResource BoolVis}}"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>

@@ -30,6 +30,18 @@ public partial class AccountViewModel : ObservableObject
     }
     public bool HasNotes => !string.IsNullOrWhiteSpace(Model.Notes);
 
+    public string TagsText => string.Join(", ", Model.Tags);
+    public bool HasTags => Model.Tags.Count > 0;
+
+    public void SetTags(IEnumerable<string> tags)
+    {
+        Model.Tags = tags.Select(t => t.Trim()).Where(t => t.Length > 0)
+                         .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        OnPropertyChanged(nameof(TagsText));
+        OnPropertyChanged(nameof(HasTags));
+        Changed?.Invoke(this);
+    }
+
     public bool Favorite
     {
         get => Model.Favorite;

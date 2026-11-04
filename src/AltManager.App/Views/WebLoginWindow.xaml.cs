@@ -214,6 +214,7 @@ public partial class WebLoginWindow : Window
             return;
         _autofilled = true;
 
+        // Roblox has changed the login field ids over time, so find fields by id, then by type/role/placeholder.
         var script = $$"""
             (function (u, p, submit) {
               const set = (el, v) => {
@@ -221,13 +222,25 @@ public partial class WebLoginWindow : Window
                 el.dispatchEvent(new Event('input', { bubbles: true }));
                 el.dispatchEvent(new Event('change', { bubbles: true }));
               };
+              const findUser = () =>
+                document.querySelector('#login-username, input[name="username"]') ||
+                [...document.querySelectorAll('input')].find(i =>
+                  i.type !== 'password' && i.type !== 'hidden' && i.offsetParent !== null &&
+                  /user|email|phone/i.test((i.placeholder||'')+' '+(i.getAttribute('aria-label')||'')+' '+(i.name||'')+' '+(i.id||'')));
+              const findPass = () =>
+                document.querySelector('#login-password, input[type="password"]');
+              const findBtn = () =>
+                document.querySelector('#login-button') ||
+                [...document.querySelectorAll('button')].find(b => /\b(log\s*in|sign\s*in)\b/i.test(b.textContent||''));
+
               let tries = 0;
               const t = setInterval(() => {
-                const a = document.querySelector('#login-username'),
-                      b = document.querySelector('#login-password'),
-                      btn = document.querySelector('#login-button');
-                if (a && b && btn) { clearInterval(t); set(a, u); set(b, p); if (submit) setTimeout(() => btn.click(), 300); }
-                else if (++tries > 60) clearInterval(t);
+                const a = findUser(), b = findPass();
+                if (a && b) {
+                  clearInterval(t);
+                  set(a, u); set(b, p);
+                  if (submit) setTimeout(() => { const btn = findBtn(); if (btn) btn.click(); }, 400);
+                } else if (++tries > 80) clearInterval(t);
               }, 250);
             })({{JsonSerializer.Serialize(c.User)}}, {{JsonSerializer.Serialize(c.Pass)}}, {{(_autoSubmit ? "true" : "false")}});
             """;
