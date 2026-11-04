@@ -69,3 +69,12 @@ public sealed class SavedWindowBounds
     public int Width { get; set; }
     public int Height { get; set; }
 }
+
+/// <summary>Roblox presence states (matches the API's userPresenceType).</summary>
+public enum PresenceType { Offline = 0, Online = 1, InGame = 2, InStudio = 3 }
+
+/// <summary>An account's current Roblox presence.</summary>
+public sealed record UserPresence(long UserId, PresenceType Type, string? LastLocation);
+
+/// <summary>A game returned by Roblox search.</summary>
+public sealed record GameSearchResult(long PlaceId, string Name, int? Players);

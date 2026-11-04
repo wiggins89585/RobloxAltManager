@@ -109,6 +109,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (GameWindowBounds.Capture(p.MainWindow) is { } b) _liveBounds[p.AccountId] = b;
         };
         _boundsPoll.Start();
+
+        _presencePoll.Interval = TimeSpan.FromSeconds(45);
+        _presencePoll.Tick += async (_, _) => await RefreshPresencesAsync();
+        _presencePoll.Start();
+    }
+
+    // ---------------- Presence (online / in-game dots) ----------------
+
+    private readonly DispatcherTimer _presencePoll = new();
+
+    /// <summary>Refreshes every account's online/in-game status via one authenticated call.</summary>
+    public async Task RefreshPresencesAsync()
+    {
+        string? cookie = null;
+        foreach (var a in Accounts) { try { cookie = _vault.GetCookie(a.Model); break; } catch { /* skip */ } }
+        if (cookie is null) return;
+
+        var ids = Accounts.Select(a => a.UserId).Where(id => id > 0).ToList();
+        if (ids.Count == 0) return;
+
+        var map = await _api.GetPresencesAsync(ids, cookie);
+        foreach (var vm in Accounts)
+            if (map.TryGetValue(vm.UserId, out var p))
+            {
+                vm.LastLocation = p.LastLocation;
+                vm.Presence = p.Type;
+            }
     }
 
     // ---------------- Per-account game-window size memory ----------------
@@ -207,6 +234,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_settings.AutoValidateOnStartup && Accounts.Count > 0)
             await ValidateAllAsync();
+        await RefreshPresencesAsync();
     }
 
     /// <summary>Persist remembered view/group; called when the window closes.</summary>
@@ -994,6 +1022,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _boundsPoll.Stop();
+        _presencePoll.Stop();
         _autoValidate.Stop();
         _clipboardClear?.Stop();
         _launchCts?.Cancel();

@@ -24,13 +24,20 @@ public partial class GameHistoryWindow : Window
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
-    private readonly ObservableCollection<GameItem> _all = new();
+    private readonly ObservableCollection<GameItem> _all = new();      // launch history
+    private readonly List<GameItem> _online = new();                   // current Roblox search results
     private readonly ObservableCollection<GameItem> _shown = new();
     private readonly Action<long> _onUse;
+    private readonly RobloxApiClient _api;
+    private readonly string? _cookie;
+    private readonly System.Windows.Threading.DispatcherTimer _searchDebounce = new() { Interval = TimeSpan.FromMilliseconds(400) };
+    private int _searchSeq; // guards against stale search results
 
     public GameHistoryWindow(IReadOnlyList<GameHistoryEntry> history, RobloxApiClient api, string? cookie, Action<long> onUse)
     {
         _onUse = onUse;
+        _api = api;
+        _cookie = cookie;
         InitializeComponent();
         Items.ItemsSource = _shown;
 
@@ -43,7 +50,7 @@ public partial class GameHistoryWindow : Window
             });
 
         ApplyFilter("");
-        EmptyText.Visibility = _all.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        _searchDebounce.Tick += async (_, _) => { _searchDebounce.Stop(); await SearchRobloxAsync(SearchBox.Text.Trim()); };
         Loaded += async (_, _) => await LoadMetaAsync(history, api, cookie);
     }
 
@@ -75,16 +82,49 @@ public partial class GameHistoryWindow : Window
         }
     }
 
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => ApplyFilter(SearchBox.Text);
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        ApplyFilter(SearchBox.Text);                 // filter history immediately
+        _online.Clear();
+        _searchDebounce.Stop();
+        if (SearchBox.Text.Trim().Length >= 2) _searchDebounce.Start();  // then search Roblox
+    }
 
     private void ApplyFilter(string q)
     {
         q = q.Trim();
         _shown.Clear();
+        var shownIds = new HashSet<long>();
         foreach (var i in _all)
             if (q.Length == 0 || i.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || i.PlaceId.ToString().Contains(q))
-                _shown.Add(i);
+            { _shown.Add(i); shownIds.Add(i.PlaceId); }
+        foreach (var i in _online)                    // Roblox results not already in history
+            if (shownIds.Add(i.PlaceId)) _shown.Add(i);
         CountText.Text = $"{_shown.Count} game(s)";
+        EmptyText.Visibility = _shown.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async Task SearchRobloxAsync(string query)
+    {
+        if (query.Length < 2) return;
+        var seq = ++_searchSeq;
+        var results = await _api.SearchGamesAsync(query);
+        if (seq != _searchSeq) return;               // a newer search superseded this one
+
+        _online.Clear();
+        foreach (var r in results.Take(40))
+            _online.Add(new GameItem
+            {
+                PlaceId = r.PlaceId,
+                Name = r.Name,
+                Subtitle = r.Players is { } p ? $"{p:N0} playing · Roblox" : "Roblox"
+            });
+        ApplyFilter(SearchBox.Text);
+
+        var icons = await _api.GetPlaceIconsAsync(_online.Select(i => i.PlaceId).ToList());
+        if (seq != _searchSeq) return;
+        foreach (var item in _online)
+            if (icons.TryGetValue(item.PlaceId, out var url)) item.IconUrl = url;
     }
 
     private static string Ago(DateTimeOffset t)

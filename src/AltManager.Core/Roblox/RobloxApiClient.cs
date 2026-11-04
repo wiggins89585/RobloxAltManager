@@ -198,6 +198,55 @@ public sealed class RobloxApiClient : IDisposable
         return result;
     }
 
+    /// <summary>Searches Roblox for games by keyword (omni-search). Returns root place ids + names, best-effort.</summary>
+    public async Task<List<GameSearchResult>> SearchGamesAsync(string keyword, CancellationToken ct = default)
+    {
+        var q = keyword.Trim();
+        if (q.Length == 0) return new();
+        var url = "https://apis.roblox.com/search-api/omni-search" +
+                  $"?searchQuery={Uri.EscapeDataString(q)}&sessionId={Guid.NewGuid()}&pageToken=";
+        try
+        {
+            var dto = await _http.GetFromJsonAsync<OmniResponse>(url, ct);
+            var seen = new HashSet<long>();
+            var list = new List<GameSearchResult>();
+            foreach (var group in dto?.SearchResults ?? new())
+                foreach (var g in group.Contents ?? new())
+                    if (g.RootPlaceId is > 0 && g.Name is not null && seen.Add(g.RootPlaceId.Value))
+                        list.Add(new GameSearchResult(g.RootPlaceId.Value, g.Name, (int?)g.PlayerCount));
+            return list;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            return new();
+        }
+    }
+
+    /// <summary>Presence (offline / online / in-game) for many users. Needs an authenticated cookie.</summary>
+    public async Task<Dictionary<long, UserPresence>> GetPresencesAsync(IEnumerable<long> userIds, string cookie, CancellationToken ct = default)
+    {
+        var result = new Dictionary<long, UserPresence>();
+        foreach (var chunk in userIds.Distinct().Chunk(100))
+        {
+            try
+            {
+                using var res = await SendWithCsrfAsync(() =>
+                {
+                    var r = Build(HttpMethod.Post, "https://presence.roblox.com/v1/presence/users", cookie);
+                    r.Content = JsonContent.Create(new { userIds = chunk });
+                    return r;
+                }, cookie, ct);
+                if (!res.IsSuccessStatusCode) continue;
+                var dto = await res.Content.ReadFromJsonAsync<PresenceResponse>(cancellationToken: ct);
+                foreach (var p in dto?.UserPresences ?? new())
+                    result[p.UserId] = new UserPresence(p.UserId, (PresenceType)p.UserPresenceType,
+                        string.IsNullOrWhiteSpace(p.LastLocation) ? null : p.LastLocation);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { /* leave missing */ }
+        }
+        return result;
+    }
+
     // ---------- Private server share links ----------
 
     /// <summary>
@@ -300,6 +349,19 @@ public sealed class RobloxApiClient : IDisposable
     private sealed record PlaceDetailDto(
         [property: JsonPropertyName("placeId")] long PlaceId,
         [property: JsonPropertyName("name")] string? Name);
+
+    private sealed record OmniResponse([property: JsonPropertyName("searchResults")] List<OmniGroup>? SearchResults);
+    private sealed record OmniGroup([property: JsonPropertyName("contents")] List<OmniGame>? Contents);
+    private sealed record OmniGame(
+        [property: JsonPropertyName("rootPlaceId")] long? RootPlaceId,
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("playerCount")] long? PlayerCount);
+
+    private sealed record PresenceResponse([property: JsonPropertyName("userPresences")] List<PresenceDto>? UserPresences);
+    private sealed record PresenceDto(
+        [property: JsonPropertyName("userId")] long UserId,
+        [property: JsonPropertyName("userPresenceType")] int UserPresenceType,
+        [property: JsonPropertyName("lastLocation")] string? LastLocation);
 
     private sealed record ThumbDto(
         [property: JsonPropertyName("targetId")] long TargetId,

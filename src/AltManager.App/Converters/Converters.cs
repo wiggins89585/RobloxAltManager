@@ -33,6 +33,30 @@ public sealed class StatusToBrushConverter : IValueConverter
     }
 }
 
+public sealed class PresenceToBrushConverter : IValueConverter
+{
+    private static readonly Brush Offline = Frozen("#80848E");
+    private static readonly Brush Online = Frozen("#5B9BD5");
+    private static readonly Brush InGame = Frozen("#23A55A");
+    private static readonly Brush InStudio = Frozen("#F0B232");
+
+    public object Convert(object value, Type t, object p, CultureInfo c) => value switch
+    {
+        PresenceType.Online => Online,
+        PresenceType.InGame => InGame,
+        PresenceType.InStudio => InStudio,
+        _ => Offline
+    };
+    public object ConvertBack(object v, Type t, object p, CultureInfo c) => throw new NotSupportedException();
+
+    private static Brush Frozen(string hex)
+    {
+        var b = (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
+        b.Freeze();
+        return b;
+    }
+}
+
 public sealed class StatusToTextConverter : IValueConverter
 {
     public object Convert(object value, Type t, object p, CultureInfo c) => value switch

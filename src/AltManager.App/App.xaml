@@ -5,6 +5,7 @@
              ShutdownMode="OnMainWindowClose">
     <Application.Resources>
         <conv:StatusToBrushConverter x:Key="StatusBrush"/>
+        <conv:PresenceToBrushConverter x:Key="PresenceBrush"/>
         <conv:StatusToTextConverter x:Key="StatusText"/>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
         <conv:InverseBoolToVisibilityConverter x:Key="BoolVisInv"/>

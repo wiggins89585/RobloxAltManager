@@ -24,7 +24,7 @@
                      ToolTip="Filter by game name or place ID"/>
         </DockPanel>
 
-        <TextBlock x:Name="EmptyText" Text="No games launched yet. Launch a game and it'll show up here."
+        <TextBlock x:Name="EmptyText" Text="No games yet. Launch one, or type a name above to search Roblox."
                    Foreground="{StaticResource Muted}" TextWrapping="Wrap" Visibility="Collapsed"/>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">

@@ -94,6 +94,22 @@ public partial class AccountViewModel : ObservableObject
         set { if (Model.Status != value) { Model.Status = value; OnPropertyChanged(); } }
     }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PresenceText))]
+    private PresenceType _presence;
+    /// <summary>Where the account is, for the presence tooltip (game name when in-game).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PresenceText))]
+    private string? _lastLocation;
+
+    public string PresenceText => Presence switch
+    {
+        PresenceType.InGame => LastLocation is { Length: > 0 } g ? $"In game: {g}" : "In game",
+        PresenceType.Online => "Online",
+        PresenceType.InStudio => "In Studio",
+        _ => "Offline"
+    };
+
     [ObservableProperty] private string? _avatarUrl;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private string _launchState = "";

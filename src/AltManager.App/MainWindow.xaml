@@ -250,10 +250,17 @@
                                         <TextBlock DockPanel.Dock="Right" Text="★" FontSize="12" Foreground="#F0B232"
                                                    VerticalAlignment="Top"
                                                    Visibility="{Binding Favorite, Converter={StaticResource BoolVis}}"/>
-                                        <Border DockPanel.Dock="Left" Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
-                                                Background="{StaticResource Raised}" Margin="0,0,8,0" VerticalAlignment="Top">
-                                            <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
-                                        </Border>
+                                        <Grid DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,8,0" VerticalAlignment="Top"
+                                              ToolTip="{Binding PresenceText}">
+                                            <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
+                                                    Background="{StaticResource Raised}">
+                                                <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
+                                            </Border>
+                                            <Border Width="14" Height="14" CornerRadius="7" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                    Background="{StaticResource Panel}">
+                                                <Ellipse Width="9" Height="9" Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
+                                            </Border>
+                                        </Grid>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
@@ -304,9 +311,15 @@
                         <DataGridTemplateColumn Header="" Width="40">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
-                                    <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Background="{StaticResource Raised}">
-                                        <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
-                                    </Border>
+                                    <Grid Width="30" Height="30" ToolTip="{Binding PresenceText}">
+                                        <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Background="{StaticResource Raised}">
+                                            <Image Source="{Binding AvatarUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <Border Width="11" Height="11" CornerRadius="6" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                Background="{StaticResource Panel}">
+                                            <Ellipse Width="7" Height="7" Fill="{Binding Presence, Converter={StaticResource PresenceBrush}}"/>
+                                        </Border>
+                                    </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
