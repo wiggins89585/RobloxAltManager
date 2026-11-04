@@ -69,6 +69,8 @@
                       Command="{Binding PlacementTarget.Tag.GroupPayoutCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <MenuItem Header="🎁  Redeem promo code…" CommandParameter="{Binding}"
                       Command="{Binding PlacementTarget.Tag.RedeemPromoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="👕  Wear outfit…" CommandParameter="{Binding}"
+                      Command="{Binding PlacementTarget.Tag.WearOutfitCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             <Separator/>
             <TextBlock Text="2-STEP VERIFICATION" Style="{StaticResource MenuHeader}"/>
             <MenuItem Header="🔐  Set 2FA secret…" CommandParameter="{Binding}"

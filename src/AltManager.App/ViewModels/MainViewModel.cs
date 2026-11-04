@@ -180,7 +180,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     // ---------------- Filtering / groups ----------------
 
-    public bool CanEditSelectedGroup => IsCustomGroup(SelectedGroup);
+    /// <summary>Any real group can be edited/deleted except the two reserved ones.</summary>
+    public bool CanEditSelectedGroup =>
+        SelectedGroup is { } g && g != AllGroups && !g.Equals("Ungrouped", StringComparison.OrdinalIgnoreCase);
 
     partial void OnSelectedGroupChanged(string value)
     {
@@ -259,7 +261,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         var current = SelectedGroup;
         var wanted = new[] { AllGroups }
-            .Concat(new[] { "Main", "Trading", "Farming Alts" })        // sensible defaults
             .Concat(_settings.CustomGroups)
             .Concat(Accounts.Select(a => a.Group))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -291,9 +292,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task EditGroupAsync()
     {
-        if (!IsCustomGroup(SelectedGroup))
+        if (!CanEditSelectedGroup)
         {
-            StatusMessage = "Select a custom group to edit.";
+            StatusMessage = "Select a group to rename (not All accounts or Ungrouped).";
             return;
         }
 
@@ -310,8 +311,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         var index = _settings.CustomGroups.FindIndex(g => g.Equals(oldName, StringComparison.OrdinalIgnoreCase));
-        if (index < 0) return;
-        _settings.CustomGroups[index] = newName;
+        if (index >= 0) _settings.CustomGroups[index] = newName;                 // a custom group: rename it in place
+        else if (!_settings.CustomGroups.Any(g => g.Equals(newName, StringComparison.OrdinalIgnoreCase)))
+            _settings.CustomGroups.Add(newName);                                  // account-derived group: keep the new name
         foreach (var account in Accounts.Where(a => a.Group.Equals(oldName, StringComparison.OrdinalIgnoreCase)))
         {
             account.Model.Group = newName;
@@ -327,9 +329,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task DeleteGroupAsync()
     {
-        if (!IsCustomGroup(SelectedGroup))
+        if (!CanEditSelectedGroup)
         {
-            StatusMessage = "Select a custom group to delete.";
+            StatusMessage = "Select a group to delete (not All accounts or Ungrouped).";
             return;
         }
 
@@ -716,6 +718,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
         StatusMessage = $"Promo '{code}': {ok}/{targets.Count} redeemed.";
         Log(ActivityLevel.Info, $"Promo code '{code}': {ok}/{targets.Count} redeemed.");
         if (failed.Count > 0) _dialogs.Error($"Redeemed {ok}/{targets.Count}.\n\nFailed:\n" + string.Join("\n", failed));
+    }
+
+    [RelayCommand]
+    private void WearOutfit(AccountViewModel? vm)
+    {
+        if (vm is null) return;
+        try { _dialogs.OpenOutfits(vm.UserId, vm.Label, _vault.GetCookie(vm.Model), _api); }
+        catch (Exception ex) { _dialogs.Error("Could not open outfits: " + ex.Message); }
     }
 
     [RelayCommand]

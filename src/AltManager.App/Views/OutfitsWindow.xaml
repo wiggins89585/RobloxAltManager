@@ -1,0 +1,15 @@
+<Window x:Class="AltManager.App.Views.OutfitsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Outfits" Width="340" Height="460" MinWidth="280" MinHeight="300"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource Bg}" Foreground="{StaticResource Fg}">
+    <DockPanel Margin="12">
+        <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock DockPanel.Dock="Bottom" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0"
+                   Text="Double-click an outfit to wear it."/>
+        <Border Background="{StaticResource Panel}" CornerRadius="6" ClipToBounds="True">
+            <ListBox x:Name="List" Background="Transparent" BorderThickness="0"
+                     MouseDoubleClick="List_DoubleClick" DisplayMemberPath="Name"/>
+        </Border>
+    </DockPanel>
+</Window>

@@ -33,6 +33,8 @@ public interface IDialogService
                          RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie);
     /// <summary>Opens the server browser for a place; onJoin gets the chosen job ID.</summary>
     void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin);
+    /// <summary>Opens the outfits picker for an account (non-modal).</summary>
+    void OpenOutfits(long userId, string label, string cookie, RobloxApiClient api);
     /// <summary>Opens the activity-log window (non-modal), bound live to the feed.</summary>
     void OpenActivityLog(System.Collections.ObjectModel.ObservableCollection<ViewModels.ActivityEntry> activity);
     /// <summary>Opens the scheduled-launches manager (modal); save is called after each change.</summary>
@@ -130,6 +132,9 @@ public sealed class DialogService : IDialogService
 
     public void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin) =>
         new ServerBrowserWindow(placeId, api, onJoin) { Owner = Owner }.Show();
+
+    public void OpenOutfits(long userId, string label, string cookie, RobloxApiClient api) =>
+        new OutfitsWindow(userId, label, cookie, api) { Owner = Owner }.Show();
 
     public void OpenActivityLog(System.Collections.ObjectModel.ObservableCollection<ViewModels.ActivityEntry> activity) =>
         new ActivityWindow(activity) { Owner = Owner }.Show();

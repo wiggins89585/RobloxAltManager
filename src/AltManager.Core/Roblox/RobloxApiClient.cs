@@ -340,6 +340,33 @@ public sealed class RobloxApiClient : IDisposable
         return null;
     }
 
+    /// <summary>The account's saved outfits (its own cookie). Returns (outfitId, name).</summary>
+    public async Task<List<(long Id, string Name)>> GetOutfitsAsync(long userId, string cookie, CancellationToken ct = default)
+    {
+        using var req = Build(HttpMethod.Get, $"https://avatar.roblox.com/v1/users/{userId}/outfits?page=1&itemsPerPage=50", cookie);
+        try
+        {
+            using var res = await _http.SendAsync(req, ct);
+            if (!res.IsSuccessStatusCode) return new();
+            var dto = await res.Content.ReadFromJsonAsync<OutfitsResponse>(cancellationToken: ct);
+            return (dto?.Data ?? new()).Where(o => o.Name is not null).Select(o => (o.Id, o.Name!)).ToList();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return new(); }
+    }
+
+    /// <summary>Makes the account wear one of its saved outfits.</summary>
+    public async Task<(bool Ok, string Message)> WearOutfitAsync(long outfitId, string cookie, CancellationToken ct = default)
+    {
+        try
+        {
+            using var res = await SendWithCsrfAsync(
+                () => Build(HttpMethod.Post, $"https://avatar.roblox.com/v1/outfits/{outfitId}/wear", cookie), cookie, ct);
+            if (res.IsSuccessStatusCode) return (true, "worn");
+            return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
+    }
+
     // ---------- Groups ----------
 
     /// <summary>Joins a Roblox group with the given account. Approval-only groups return a message instead.</summary>
@@ -529,6 +556,11 @@ public sealed class RobloxApiClient : IDisposable
         [property: JsonPropertyName("playing")] int? Playing,
         [property: JsonPropertyName("fps")] double? Fps,
         [property: JsonPropertyName("ping")] int? Ping);
+
+    private sealed record OutfitsResponse([property: JsonPropertyName("data")] List<OutfitDto>? Data);
+    private sealed record OutfitDto(
+        [property: JsonPropertyName("id")] long Id,
+        [property: JsonPropertyName("name")] string? Name);
 
     private sealed record CurrencyDto([property: JsonPropertyName("robux")] long Robux);
     private sealed record UserInfoDto([property: JsonPropertyName("created")] DateTimeOffset? Created);

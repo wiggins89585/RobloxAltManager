@@ -237,17 +237,24 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <Border x:Name="Box" Width="16" Height="16" CornerRadius="4" Background="{StaticResource Bg}"
-                                BorderBrush="{StaticResource Muted}" BorderThickness="1.5">
-                            <TextBlock x:Name="Mark" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                       Visibility="Hidden"/>
-                        </Border>
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="Box" Width="16" Height="16" CornerRadius="4" Background="{StaticResource Bg}"
+                                    BorderBrush="{StaticResource Muted}" BorderThickness="1.5" VerticalAlignment="Center">
+                                <TextBlock x:Name="Mark" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Hidden"/>
+                            </Border>
+                            <ContentPresenter x:Name="Content" Margin="8,0,0,0" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Box" Property="Background" Value="{StaticResource Accent}"/>
                                 <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Accent}"/>
                                 <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="HasContent" Value="False">
+                                <Setter TargetName="Content" Property="Margin" Value="0"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
