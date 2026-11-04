@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        VersionText.Text = $"v{typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}";
         StateChanged += (_, _) =>
         {
             // Segoe MDL2: E923 = restore, E922 = maximize
