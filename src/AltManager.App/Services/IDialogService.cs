@@ -14,6 +14,9 @@ public interface IDialogService
     (IReadOnlyList<(string User, string Pass)> Credentials, string Group, int DelaySeconds)? BulkLoginInput(IEnumerable<string> groups);
     /// <summary>Bulk browser login: fills + submits automatically; keeps the window open for verification challenges.</summary>
     BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress, string? totpSecret = null);
+    /// <summary>Opens one account's group page, joins, and returns once it's done (modal).</summary>
+    Views.GroupJoinResult JoinGroupInBrowser(RobloxApiClient api, string cookie, string profileKey, string label,
+                                             long userId, long groupId, string progress);
     /// <summary>Manual browser login: fields pre-filled but the user clicks Log In and enters any code.</summary>
     string? BrowserLoginManual(string? customUserAgent, string username, string password, string progress);
     bool Confirm(string message);
@@ -43,7 +46,7 @@ public interface IDialogService
 
 /// <param name="Cookie">Captured cookie, or null.</param>
 /// <param name="NeedsManual">Auto-login detected a verification challenge that needs user input in the open window.</param>
-public readonly record struct BrowserLoginResult(string? Cookie, bool NeedsManual);
+public readonly record struct BrowserLoginResult(string? Cookie, bool NeedsManual, bool WrongPassword);
 
 public sealed class DialogService : IDialogService
 {
@@ -71,7 +74,15 @@ public sealed class DialogService : IDialogService
     {
         var w = new WebLoginWindow(customUserAgent, (username, password), progress, totpSecret: totpSecret) { Owner = Owner };
         w.ShowDialog();
-        return new BrowserLoginResult(w.CapturedCookie, w.NeedsManual);
+        return new BrowserLoginResult(w.CapturedCookie, w.NeedsManual, w.WrongPassword);
+    }
+
+    public GroupJoinResult JoinGroupInBrowser(RobloxApiClient api, string cookie, string profileKey, string label,
+                                              long userId, long groupId, string progress)
+    {
+        var w = new GroupJoinWindow(api, cookie, profileKey, label, userId, groupId, progress) { Owner = Owner };
+        w.ShowDialog();
+        return w.Result;
     }
 
     public string? BrowserLoginManual(string? customUserAgent, string username, string password, string progress)

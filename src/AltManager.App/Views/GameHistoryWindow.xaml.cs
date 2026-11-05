@@ -19,10 +19,13 @@ public partial class GameHistoryWindow : Window
         public long PlaceId { get; init; }
         public string Name { get; set; } = "";
         public string Subtitle { get; init; } = "";
+        public IReadOnlyList<PlayRow> Plays { get; init; } = Array.Empty<PlayRow>();
         private string? _iconUrl;
         public string? IconUrl { get => _iconUrl; set { _iconUrl = value; PropertyChanged?.Invoke(this, new(nameof(IconUrl))); } }
         public event PropertyChangedEventHandler? PropertyChanged;
     }
+
+    public sealed record PlayRow(string Name, string Detail);
 
     private readonly ObservableCollection<GameItem> _all = new();      // launch history
     private readonly List<GameItem> _online = new();                   // current Roblox search results
@@ -46,7 +49,13 @@ public partial class GameHistoryWindow : Window
             {
                 PlaceId = g.PlaceId,
                 Name = string.IsNullOrWhiteSpace(g.Name) ? $"Place {g.PlaceId}" : g.Name,
-                Subtitle = $"{g.PlaceId} · {Ago(g.LastPlayed)}"
+                Subtitle = g.Plays.Count > 0
+                    ? $"{Span(g.Plays.Sum(p => p.Seconds))} · {Ago(g.LastPlayed)}"
+                    : $"{g.PlaceId} · {Ago(g.LastPlayed)}",
+                Plays = g.Plays.OrderByDescending(p => p.Seconds)
+                    .Select(p => new PlayRow(p.Username,
+                        $"{Span(p.Seconds)} · {p.Sessions} session{(p.Sessions == 1 ? "" : "s")} · {Ago(p.LastPlayed)}"))
+                    .ToList()
             });
 
         ApplyFilter("");
@@ -125,6 +134,19 @@ public partial class GameHistoryWindow : Window
         if (seq != _searchSeq) return;
         foreach (var item in _online)
             if (icons.TryGetValue(item.PlaceId, out var url)) item.IconUrl = url;
+    }
+
+    private static string Span(double seconds)
+    {
+        var t = TimeSpan.FromSeconds(seconds);
+        return t.TotalHours >= 1 ? $"{(int)t.TotalHours}h {t.Minutes}m" : $"{Math.Max(1, (int)t.TotalMinutes)}m";
+    }
+
+    private void Card_Enter(object sender, MouseEventArgs e)
+    {
+        if (ItemOf(sender) is not { } g) return;
+        PlaysTitle.Text = g.Plays.Count > 0 ? g.Name : $"{g.Name} — no recorded play time yet";
+        PlaysList.ItemsSource = g.Plays;
     }
 
     private static string Ago(DateTimeOffset t)

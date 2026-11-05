@@ -50,6 +50,7 @@
                                TextTrimming="CharacterEllipsis"/>
 
                     <TextBox x:Name="UrlBox" VerticalAlignment="Center" Height="26" Margin="8,0"
+                             WindowChrome.IsHitTestVisibleInChrome="True"
                              Padding="7,3" ToolTip="Roblox page URL — press Enter to navigate"
                              Text="https://www.roblox.com/home" KeyDown="UrlBox_KeyDown"/>
                 </DockPanel>

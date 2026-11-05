@@ -54,6 +54,15 @@ public partial class MainWindow : Window
         PreviewMouseDown += (_, _) => Vm?.ResetIdle();
         PreviewKeyDown += (_, _) => Vm?.ResetIdle();
 
+        // Ctrl+A checks every visible account, unless a text field should select its own text.
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.A || Keyboard.Modifiers != ModifierKeys.Control) return;
+            if (Keyboard.FocusedElement is TextBoxBase or PasswordBox || Vm is not { IsLocked: false } vm) return;
+            vm.SelectAllAccounts();
+            e.Handled = true;
+        };
+
         // Persist window size automatically a moment after the user stops resizing.
         _saveSize = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _saveSize.Tick += (_, _) => { _saveSize.Stop(); PersistSize(); };

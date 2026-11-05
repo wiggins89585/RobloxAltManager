@@ -136,8 +136,27 @@ public partial class AccountViewModel : ObservableObject
     public AccountStatus Status
     {
         get => Model.Status;
-        set { if (Model.Status != value) { Model.Status = value; OnPropertyChanged(); } }
+        set { if (Model.Status != value) { Model.Status = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusLabel)); } }
     }
+
+    /// <summary>Only true when Roblox confirmed there's no end date.</summary>
+    public bool IsPermBanned => Status == AccountStatus.Banned && Model.BanChecked && Model.BanEnds is null;
+
+    /// <summary>Status text; a temporary ban shows the time left, a permanent one just "Banned".</summary>
+    public string StatusLabel
+    {
+        get
+        {
+            if (Status != AccountStatus.Banned || Model.BanEnds is not { } end) return Status.ToString();
+            var left = end - DateTimeOffset.UtcNow;
+            if (left <= TimeSpan.Zero) return "Ban over";
+            return left.TotalDays >= 1 ? $"Banned {(int)left.TotalDays}d {left.Hours}h"
+                 : left.TotalHours >= 1 ? $"Banned {(int)left.TotalHours}h"
+                 : $"Banned {Math.Max(1, left.Minutes)}m";
+        }
+    }
+
+    public void RefreshBan() { OnPropertyChanged(nameof(StatusLabel)); OnPropertyChanged(nameof(IsPermBanned)); }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PresenceText))]

@@ -25,6 +25,16 @@ public sealed class LaunchSchedule
     public string LastFired { get; set; } = "";    // yyyy-MM-dd of the last fire, to avoid double-firing
 }
 
+/// <summary>How long one account has had a game's client open.</summary>
+public sealed class AccountPlayTime
+{
+    public Guid AccountId { get; set; }
+    public string Username { get; set; } = "";
+    public double Seconds { get; set; }
+    public int Sessions { get; set; }
+    public DateTimeOffset LastPlayed { get; set; }
+}
+
 /// <summary>A game the user has launched, for the game-history view.</summary>
 public sealed class GameHistoryEntry
 {
@@ -32,6 +42,7 @@ public sealed class GameHistoryEntry
     public string Name { get; set; } = "";
     public DateTimeOffset LastPlayed { get; set; }
     public int LaunchCount { get; set; }
+    public List<AccountPlayTime> Plays { get; set; } = new();
 }
 
 /// <summary>

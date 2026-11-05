@@ -163,6 +163,10 @@
                         ToolTip="Re-check every account's cookie"/>
                 <Button DockPanel.Dock="Left" Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
                         ToolTip="Remove the selected accounts"/>
+                <Button DockPanel.Dock="Left" Content="Move banned" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
+                        ToolTip="Move permanently banned accounts to the Banned group"/>
+                <Button DockPanel.Dock="Left" Content="Remove banned" Style="{StaticResource ToolbarButton}" Command="{Binding RemovePermBannedCommand}"
+                        ToolTip="Remove permanently banned accounts (temporary bans are kept)"/>
 
                 <!-- App tools (docked right; declared right-to-left so Settings sits at the far right) -->
                 <Button DockPanel.Dock="Right" Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
@@ -349,7 +353,7 @@
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                 <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"
                                                          Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
-                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusText}}" FontSize="10"
+                                                <TextBlock Text="{Binding StatusLabel}" FontSize="10"
                                                            Foreground="{DynamicResource Muted}"/>
                                                 <TextBlock Text="✎" FontSize="10" Margin="5,0,0,0" Foreground="{DynamicResource Muted}"
                                                            ToolTip="{Binding Notes}"
@@ -461,7 +465,7 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                                                  Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
-                                        <TextBlock Text="{Binding Status, Converter={StaticResource StatusText}}"/>
+                                        <TextBlock Text="{Binding StatusLabel}"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -483,16 +487,6 @@
                         <DataGridTextColumn Header="AGE" Width="48" MinWidth="44" IsReadOnly="True"
                                             Binding="{Binding AgeText}" Foreground="{DynamicResource Muted}"/>
 
-                        <DataGridTextColumn Header="GAME" Width="1*" MinWidth="110"
-                                            Binding="{Binding GameOverride, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
-                                    <Setter Property="ToolTip" Value="Per-account Roblox game ID (blank = use Launch panel). Enter a numeric Place ID."/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
                 </Border>

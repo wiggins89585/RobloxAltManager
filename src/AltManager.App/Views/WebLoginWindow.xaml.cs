@@ -35,6 +35,9 @@ public partial class WebLoginWindow : Window
     /// Bulk auto-login hit a verification/2-step challenge (e.g. an email code).
     /// </summary>
     public bool NeedsManual { get; private set; }
+
+    /// <summary>Roblox refused the username/password, so there's nothing to wait for.</summary>
+    public bool WrongPassword { get; private set; }
     private readonly DispatcherTimer _blankCheck = new() { Interval = TimeSpan.FromSeconds(12) };
     private readonly DispatcherTimer _retryTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private int _retries, _retrySecondsLeft;
@@ -263,6 +266,16 @@ public partial class WebLoginWindow : Window
     private async Task TryDetectChallengeAsync()
     {
         if (!_submitted || !_abortOnChallenge || _captured || NeedsManual || Browser.CoreWebView2 is null) return;
+
+        var wrong = await Browser.CoreWebView2.ExecuteScriptAsync(
+            "/incorrect username or password/i.test(document.body ? document.body.innerText : '')");
+        if (wrong.Trim() == "true" && !_captured)
+        {
+            WrongPassword = true;
+            _poll.Stop();
+            Close();
+            return;
+        }
 
         const string probe = """
             (function () {

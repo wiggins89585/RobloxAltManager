@@ -101,6 +101,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             var row = ActiveProcesses.FirstOrDefault(x => x.Pid == p.Pid);
             if (row is not null) ActiveProcesses.Remove(row);
             SetPid(p.AccountId, null);
+            RecordPlayTime(p);
             PersistWindowBounds(p.AccountId);
             if (_userClosed.Remove(p.AccountId)) { /* closed on purpose — don't rejoin */ }
             else MaybeRejoin(p.AccountId);
@@ -127,6 +128,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
         _localApi = new LocalApiServer(this);
         ApplyLocalApiSettings();
+        _ = RefreshStaleInfoAsync(); // Robux / Premium / age show without a manual refresh
     }
 
     // ---------------- Presence (online / in-game dots) ----------------
@@ -370,6 +372,11 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         foreach (var v in visible) v.IsSelected = target;
     }
 
+    public void SelectAllAccounts()
+    {
+        foreach (var v in AccountsView.Cast<AccountViewModel>()) v.IsSelected = true;
+    }
+
     // ---------------- Account intake ----------------
 
     [RelayCommand]
@@ -428,6 +435,11 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             StatusMessage = $"Bulk import {i + 1}/{creds.Count}: {user}…";
             var result = _dialogs.BulkBrowserLogin(ua, user, pass, $"{i + 1}/{creds.Count}");
 
+            if (result.WrongPassword)
+            {
+                failed.Add($"{user} (incorrect username or password)");
+                continue; // not worth stopping the run: it's reported at the end
+            }
             if (result.Cookie is null)
             {
                 failed.Add(result.NeedsManual
@@ -467,6 +479,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             user = knownUsername is null ? null : await _api.ResolveUserAsync(knownUsername);
             if (user is null) return (false, "banned (couldn't resolve account id)");
             await StoreAsync(user, cookie, group, AccountStatus.Banned, password);
+            if (Accounts.FirstOrDefault(a => a.UserId == user.Id) is { } added) await UpdateBanAsync(added, cookie);
+            await _vault.SaveAsync();
             return (true, "banned");
         }
 
@@ -510,11 +524,13 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
                         vm.Status = AccountStatus.Valid;
                         vm.Model.Username = user!.Name;     // handle username changes
                         vm.Model.DisplayName = user.DisplayName;
+                        await UpdateBanAsync(vm, ""); // no longer banned: clear any old ban details
                         vm.Refresh();
                         valid++;
                         break;
                     case AccountState.Banned:
                         vm.Status = AccountStatus.Banned;
+                        await UpdateBanAsync(vm, _vault.GetCookie(vm.Model));
                         banned++;
                         break;
                     case AccountState.Invalid:
@@ -530,6 +546,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             await _vault.SaveAsync();
             await LoadAvatarsAsync(Accounts.Select(a => a.UserId));
             foreach (var vm in Accounts) vm.RefreshDisplay(); // update "last checked" times
+            _ = RefreshStaleInfoAsync();
             StatusMessage = $"{valid} valid, {expired} expired" + (banned > 0 ? $", {banned} banned." : ".");
             Log(banned > 0 || expired > 0 ? ActivityLevel.Warn : ActivityLevel.Info,
                 $"Validated accounts: {valid} valid, {expired} expired, {banned} banned.");
@@ -589,6 +606,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
                 _ => AccountStatus.Error
             };
             if (user is not null) { t.Model.Username = user.Name; t.Model.DisplayName = user.DisplayName; }
+            await UpdateBanAsync(t, _vault.GetCookie(t.Model));
             t.Refresh();
             if (targets.Count > 1) await Task.Delay(250); // be polite to the API
         }
@@ -614,6 +632,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             {
                 var r = _dialogs.BulkBrowserLogin(ua, t.Model.Username, pass, "", _vault.GetTotpSecret(t.Model));
                 cookie = r.Cookie;
+                if (r.WrongPassword) { Log(ActivityLevel.Warn, $"{t.Label}: incorrect username or password."); continue; }
             }
             if (cookie is null) continue; // cancelled this one; move on
 
@@ -621,6 +640,82 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             if (added) ok++;
         }
         StatusMessage = $"Re-logged in {ok}/{targets.Count} account(s).";
+    }
+
+    /// <summary>Reads how long the account is banned for, or clears the details if it isn't.</summary>
+    private async Task UpdateBanAsync(AccountViewModel vm, string cookie)
+    {
+        if (vm.Status == AccountStatus.Banned)
+        {
+            var (known, ends) = await _api.GetBanInfoAsync(cookie);
+            vm.Model.BanChecked = known;
+            vm.Model.BanEnds = ends;
+        }
+        else
+        {
+            vm.Model.BanChecked = false;
+            vm.Model.BanEnds = null;
+        }
+        vm.RefreshBan();
+    }
+
+    /// <summary>Permanently banned accounts, looking up any ban that hasn't been read yet.</summary>
+    private async Task<List<AccountViewModel>> PermBannedAsync()
+    {
+        foreach (var a in Accounts.Where(a => a.Status == AccountStatus.Banned && !a.Model.BanChecked).ToList())
+        {
+            try { await UpdateBanAsync(a, _vault.GetCookie(a.Model)); } catch { /* stays unconfirmed */ }
+            await Task.Delay(250);
+        }
+        await _vault.SaveAsync();
+        return Accounts.Where(a => a.IsPermBanned).ToList();
+    }
+
+    [RelayCommand]
+    private async Task RemovePermBannedAsync()
+    {
+        var perm = await PermBannedAsync();
+        if (perm.Count == 0) { StatusMessage = "No confirmed permanent bans."; return; }
+        if (!_dialogs.Confirm($"Remove {perm.Count} permanently banned account(s) from the vault?\n\n" +
+                              string.Join("\n", perm.Select(a => a.Label)))) return;
+        foreach (var a in perm) { _vault.Remove(a.Model.Id); Accounts.Remove(a); }
+        await _vault.SaveAsync();
+        RebuildGroups();
+        StatusMessage = $"Removed {perm.Count} permanently banned account(s).";
+    }
+
+    [RelayCommand]
+    private async Task MovePermBannedAsync()
+    {
+        var perm = await PermBannedAsync();
+        if (perm.Count == 0) { StatusMessage = "No confirmed permanent bans."; return; }
+        var banned = Groups.FirstOrDefault(g => g.Equals("Banned", StringComparison.OrdinalIgnoreCase)) ?? "Banned";
+        foreach (var a in perm) a.Group = banned;
+        await _vault.SaveAsync();
+        RebuildGroups();
+        StatusMessage = $"Moved {perm.Count} account(s) to the Banned group.";
+    }
+
+    /// <summary>Fills Robux/Premium/age in the background for accounts missing them or gone stale.</summary>
+    public async Task RefreshStaleInfoAsync()
+    {
+        var cutoff = DateTimeOffset.UtcNow.AddHours(-1);
+        foreach (var t in Accounts.Where(a => a.Status != AccountStatus.Banned &&
+                                              (a.Model.InfoUpdated is null || a.Model.InfoUpdated < cutoff)).ToList())
+        {
+            try { await FetchInfoAsync(t, _vault.GetCookie(t.Model)); } catch { /* try again next time */ }
+            await Task.Delay(250);
+        }
+        await _vault.SaveAsync();
+    }
+
+    private async Task FetchInfoAsync(AccountViewModel t, string cookie)
+    {
+        t.Model.Robux = await _api.GetRobuxAsync(cookie) ?? t.Model.Robux; // a failed call keeps the last value
+        t.Model.Premium = await _api.GetPremiumAsync(t.UserId, cookie) ?? t.Model.Premium;
+        t.Model.Created ??= await _api.GetCreatedAsync(t.UserId); // created never changes
+        t.Model.InfoUpdated = DateTimeOffset.UtcNow;
+        t.RefreshInfo();
     }
 
     [RelayCommand]
@@ -637,11 +732,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             string cookie;
             try { cookie = _vault.GetCookie(t.Model); } catch { continue; }
 
-            t.Model.Robux = await _api.GetRobuxAsync(cookie);
-            t.Model.Premium = await _api.GetPremiumAsync(t.UserId, cookie);
-            t.Model.Created ??= await _api.GetCreatedAsync(t.UserId); // created never changes
-            t.Model.InfoUpdated = DateTimeOffset.UtcNow;
-            t.RefreshInfo();
+            await FetchInfoAsync(t, cookie);
             if (targets.Count > 1) await Task.Delay(200);
         }
         await _vault.SaveAsync();
@@ -656,6 +747,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         var input = _dialogs.Prompt("Join Roblox group", $"Group ID for {targets.Count} account(s) to join:");
         if (!long.TryParse(input, out var groupId) || groupId <= 0) return;
 
+        // Same approach as login: the real page in a browser window, where Roblox's verification
+        // can be solved. The direct API call gets refused with "Challenge is required".
         int ok = 0;
         var failed = new List<string>();
         for (var i = 0; i < targets.Count; i++)
@@ -664,9 +757,12 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             StatusMessage = $"Joining group {i + 1}/{targets.Count}: {t.Label}…";
             string cookie;
             try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); continue; }
-            var (joined, msg) = await _api.JoinGroupAsync(groupId, cookie);
-            if (joined) ok++; else failed.Add($"{t.Label} ({msg})");
-            if (targets.Count > 1) await Task.Delay(400); // pace to avoid rate limits
+            var result = _dialogs.JoinGroupInBrowser(_api, cookie, t.Model.Id.ToString(), t.Label, t.UserId, groupId,
+                                                     $"{i + 1}/{targets.Count}");
+            if (result == Views.GroupJoinResult.Joined) ok++;
+            else if (result == Views.GroupJoinResult.Pending) failed.Add($"{t.Label} (waiting for group approval)");
+            else if (result == Views.GroupJoinResult.Skipped) failed.Add($"{t.Label} (skipped)");
+            else { failed.Add($"{t.Label} and any after it (stopped)"); break; }
         }
         StatusMessage = $"Joined group {groupId}: {ok}/{targets.Count}.";
         Log(failed.Count > 0 ? ActivityLevel.Warn : ActivityLevel.Info, $"Join group {groupId}: {ok}/{targets.Count} succeeded.");
@@ -1169,6 +1265,22 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
     // ---------------- Game history ----------------
 
+    /// <summary>Credits a closed client's open time to its account under the game it was launched into.</summary>
+    private void RecordPlayTime(TrackedProcess p)
+    {
+        if (!_lastTarget.TryGetValue(p.AccountId, out var target) || target.PlaceId <= 0) return;
+        var entry = _settings.GameHistory.FirstOrDefault(g => g.PlaceId == target.PlaceId);
+        if (entry is null) { entry = new GameHistoryEntry { PlaceId = target.PlaceId, LastPlayed = p.Started }; _settings.GameHistory.Add(entry); }
+
+        var play = entry.Plays.FirstOrDefault(x => x.AccountId == p.AccountId);
+        if (play is null) { play = new AccountPlayTime { AccountId = p.AccountId }; entry.Plays.Add(play); }
+        play.Username = Accounts.FirstOrDefault(a => a.Model.Id == p.AccountId)?.Model.Username ?? p.AccountLabel;
+        play.Seconds += Math.Max(0, (DateTimeOffset.UtcNow - p.Started).TotalSeconds);
+        play.Sessions++;
+        play.LastPlayed = DateTimeOffset.UtcNow;
+        _settings.Save();
+    }
+
     private void RecordGameHistory(IEnumerable<long> placeIds)
     {
         var now = DateTimeOffset.UtcNow;
@@ -1633,6 +1745,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
     public void Dispose()
     {
+        foreach (var p in ActiveProcesses) RecordPlayTime(p); // clients still open when the app closes
         _boundsPoll.Stop();
         _presencePoll.Stop();
         _scheduleTimer.Stop();

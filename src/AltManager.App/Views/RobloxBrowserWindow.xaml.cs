@@ -14,92 +14,6 @@ namespace AltManager.App.Views;
 public partial class RobloxBrowserWindow : Window
 {
     private const string Home = "https://www.roblox.com/home";
-    private const string RobloxDarkThemeScript = """
-        (() => {
-            const host = location.hostname.toLowerCase();
-            if (host !== "roblox.com" && !host.endsWith(".roblox.com")) return;
-
-            const styleId = "__alt_manager_theme_v2";
-            const css = `
-                :root {
-                    color-scheme: dark;
-                    --color-background: #1e1f22;
-                    --color-surface: #2b2d31;
-                    --color-text-primary: #dbdee1;
-                    --color-text-secondary: #b5bac1;
-                    --color-border: #3f4147;
-                    --color-primary: #5865f2;
-                }
-
-                html, body, #wrap, #rbx-body, #container-main, .container-main,
-                #content, main, [role="main"] {
-                    background-color: #1e1f22 !important;
-                }
-
-                h1, h2, h3, h4, h5, h6, p, label,
-                .text, .text-name, .text-description, .text-secondary, .text-muted,
-                .game-card-name, .game-card-info, .font-caption-header, .font-caption-body,
-                [class*="font-header"], [class*="font-body"],
-                [class*="text-name"], [class*="text-description"],
-                [class*="game-card-name"], [class*="game-card-info"] {
-                    color: #dbdee1 !important;
-                }
-
-                small, .text-muted, .text-secondary, .text-description,
-                [class*="text-secondary"], [class*="text-muted"] {
-                    color: #b5bac1 !important;
-                }
-
-                .section, .section-content, .tab-content,
-                [class*="panel"], [class*="card"]:not([class*="game-card"]),
-                .modal-content, .dropdown-menu, .popover, .well {
-                    background-color: #2b2d31 !important;
-                    border-color: #3f4147 !important;
-                }
-
-                .rbx-header, #header, #navContent {
-                    background-color: #2b2d31 !important;
-                    border-color: #3f4147 !important;
-                }
-
-                .rbx-header a:not([class*="icon"]):not([class*="glyph"]),
-                #header a:not([class*="icon"]):not([class*="glyph"]) {
-                    color: #dbdee1 !important;
-                }
-
-                .form-control, .rbx-input-field, input:not([type="checkbox"]):not([type="radio"]),
-                select, textarea, [contenteditable="true"] {
-                    background-color: #1e1f22 !important;
-                    border-color: #3f4147 !important;
-                    color: #dbdee1 !important;
-                }
-
-                input::placeholder, textarea::placeholder {
-                    color: #b5bac1 !important;
-                    opacity: 1;
-                }
-            `;
-
-            const injectTheme = () => {
-                if (!document.documentElement) return false;
-                let style = document.getElementById(styleId);
-                if (!style) {
-                    style = document.createElement("style");
-                    style.id = styleId;
-                    (document.head || document.documentElement).appendChild(style);
-                }
-                style.textContent = css;
-                return true;
-            };
-
-            if (!injectTheme()) {
-                const observer = new MutationObserver(() => {
-                    if (injectTheme()) observer.disconnect();
-                });
-                observer.observe(document, { childList: true, subtree: true });
-            }
-        })();
-        """;
     private string? _cookie;
     private readonly string _profileKey;
 
@@ -136,7 +50,6 @@ public partial class RobloxBrowserWindow : Window
         var core = Browser.CoreWebView2;
         core.Settings.AreDevToolsEnabled = false;
         core.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.None;
-        await core.AddScriptToExecuteOnDocumentCreatedAsync(RobloxDarkThemeScript);
         core.NavigationStarting += (_, e) =>
         {
             if (!IsTrustedRobloxUri(e.Uri))

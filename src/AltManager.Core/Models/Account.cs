@@ -53,6 +53,10 @@ public sealed class Account
     public DateTimeOffset? Created { get; set; }
     public DateTimeOffset? InfoUpdated { get; set; }
     public AccountStatus Status { get; set; } = AccountStatus.Unknown;
+    /// <summary>True once Roblox's ban details were read; only then can a ban be called permanent.</summary>
+    public bool BanChecked { get; set; }
+    /// <summary>When a temporary ban ends. Null with <see cref="BanChecked"/> set = permanent.</summary>
+    public DateTimeOffset? BanEnds { get; set; }
     public DateTimeOffset? LastValidated { get; set; }
     public DateTimeOffset Added { get; init; } = DateTimeOffset.UtcNow;
 

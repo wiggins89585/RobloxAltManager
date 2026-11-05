@@ -295,6 +295,38 @@ public sealed class RobloxApiClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
     }
 
+    /// <summary>
+    /// Reads the account's punishment. Known=false if Roblox wouldn't say; Ends=null when Known
+    /// means no end date, i.e. permanent.
+    /// </summary>
+    public async Task<(bool Known, DateTimeOffset? Ends)> GetBanInfoAsync(string cookie, CancellationToken ct = default)
+    {
+        using var req = Build(HttpMethod.Get, "https://usermoderation.roblox.com/v1/not-approved", cookie);
+        try
+        {
+            using var res = await Send(req, ct);
+            if (!res.IsSuccessStatusCode) return (false, null);
+            var dto = await res.Content.ReadFromJsonAsync<NotApprovedDto>(cancellationToken: ct);
+            if (dto?.PunishmentType is null) return (false, null);
+            return (true, DateTimeOffset.TryParse(dto.EndDate, out var ends) ? ends : null); // "" = no end date
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { return (false, null); }
+    }
+
+    /// <summary>Whether the user is in the group (public endpoint). Null if Roblox wouldn't say.</summary>
+    public async Task<bool?> IsInGroupAsync(long userId, long groupId, CancellationToken ct = default)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(
+                await _http.GetStringAsync($"https://groups.roblox.com/v2/users/{userId}/groups/roles", ct));
+            return doc.RootElement.GetProperty("data").EnumerateArray()
+                .Any(g => g.GetProperty("group").GetProperty("id").GetInt64() == groupId);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
+                                      or KeyNotFoundException or InvalidOperationException) { return null; }
+    }
+
     /// <summary>Whether the account has Premium (its own cookie).</summary>
     public async Task<bool?> GetPremiumAsync(long userId, string cookie, CancellationToken ct = default)
     {
@@ -379,23 +411,6 @@ public sealed class RobloxApiClient : IDisposable
     }
 
     // ---------- Groups ----------
-
-    /// <summary>Joins a Roblox group with the given account. Approval-only groups return a message instead.</summary>
-    public async Task<(bool Ok, string Message)> JoinGroupAsync(long groupId, string cookie, CancellationToken ct = default)
-    {
-        try
-        {
-            using var res = await SendWithCsrfAsync(() =>
-            {
-                var r = Build(HttpMethod.Post, $"https://groups.roblox.com/v1/groups/{groupId}/users", cookie);
-                r.Content = JsonContent.Create(new { });
-                return r;
-            }, cookie, ct);
-            if (res.IsSuccessStatusCode) return (true, "joined");
-            return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
-    }
 
     /// <summary>The group's Robux fund balance (a cookie with group-funds permission).</summary>
     public async Task<long?> GetGroupFundsAsync(long groupId, string cookie, CancellationToken ct = default)
@@ -663,6 +678,10 @@ public sealed class RobloxApiClient : IDisposable
     private sealed record OutfitDto(
         [property: JsonPropertyName("id")] long Id,
         [property: JsonPropertyName("name")] string? Name);
+
+    private sealed record NotApprovedDto(
+        [property: JsonPropertyName("punishmentTypeDescription")] string? PunishmentType,
+        [property: JsonPropertyName("endDate")] string? EndDate);
 
     private sealed record CurrencyDto([property: JsonPropertyName("robux")] long Robux);
     private sealed record UserInfoDto([property: JsonPropertyName("created")] DateTimeOffset? Created);
