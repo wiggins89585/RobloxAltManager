@@ -77,13 +77,12 @@ public partial class GroupJoinWindow : Window
         {
             if (await _api.IsInGroupAsync(_userId, _groupId) == true) { Finish(GroupJoinResult.Joined); return; }
 
-            // 4 = agreement dialog waiting, 3 = Roblox refused, 2 = awaiting approval,
+            // 3 = Roblox refused, 2 = awaiting approval,
             // 1 = Join button found (pressed once), 0 = not on the page yet.
             var js = $$"""
                 (function (click) {
                   const btns = [...document.querySelectorAll('button')].filter(b => b.offsetParent !== null);
                   const label = b => (b.textContent || '').trim();
-                  if (btns.some(b => /^i agree$/i.test(label(b)))) return 4;
                   if (/unable to join/i.test(document.body ? document.body.innerText : '')) return 3;
                   if (btns.some(b => /^(pending|join request sent|cancel request)/i.test(label(b)))) return 2;
                   const join = btns.find(b => /^join( community| group)?$/i.test(label(b)));
@@ -95,11 +94,6 @@ public partial class GroupJoinWindow : Window
             var state = (await Browser.CoreWebView2.ExecuteScriptAsync(js)).Trim();
             if (state == "2") { Finish(GroupJoinResult.Pending); return; }
             if (state == "3" && _clicked) { Finish(GroupJoinResult.Failed); return; }
-            if (state == "4")
-            {
-                StatusText.Text = $"Roblox wants {_label} to accept its updated agreement. Review it here to continue.";
-                return;
-            }
             if (state == "1" && !_clicked)
             {
                 _clicked = true;
