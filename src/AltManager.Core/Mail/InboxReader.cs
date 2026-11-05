@@ -14,6 +14,8 @@ public sealed class MailInbox
     public string Address { get; set; } = "";
     public string Host { get; set; } = "";
     public int Port { get; set; } = 993;
+    /// <summary>Google sign-in inboxes only: the OAuth client from the user's own project.</summary>
+    public string ClientId { get; set; } = "";
     public string EncryptedPassword { get; set; } = "";
 }
 
@@ -33,6 +35,8 @@ public static class InboxReader
     public static async Task<string?> FindCodeAsync(MailInbox inbox, string password, DateTimeOffset since,
                                                     ISet<string> used, CancellationToken ct = default)
     {
+        if (inbox.Host == GoogleInbox.Host) return await GoogleInbox.FindCodeAsync(inbox, password, since, used, ct);
+
         using var client = await ConnectAsync(inbox, password, ct);
         var query = SearchQuery.FromContains("roblox.com").And(SearchQuery.DeliveredAfter(since.UtcDateTime.AddDays(-1)));
         var ids = await client.Inbox.SearchAsync(query, ct);
@@ -48,7 +52,7 @@ public static class InboxReader
         return null;
     }
 
-    private static string? Extract(MimeMessage msg)
+    public static string? Extract(MimeMessage msg)
     {
         var text = msg.TextBody ?? Regex.Replace(msg.HtmlBody ?? "", "<(style|script|head)[^>]*>.*?</\\1>|<[^>]+>", " ",
                                                  RegexOptions.Singleline | RegexOptions.IgnoreCase);

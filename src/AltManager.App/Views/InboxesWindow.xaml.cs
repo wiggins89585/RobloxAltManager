@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using AltManager.Core.Mail;
@@ -12,7 +13,9 @@ public partial class InboxesWindow : Window
 
     private static readonly Preset[] Presets =
     {
-        new("Gmail", "imap.gmail.com", 993, "App password",
+        new("Gmail (Sign in with Google)", GoogleInbox.Host, 0, "Client secret",
+            "Enter the Desktop OAuth client from your Google Cloud project, then sign in with your browser."),
+        new("Gmail (app password)", "imap.gmail.com", 993, "App password",
             "Use a 16-letter app password from myaccount.google.com/apppasswords, not your normal password."),
         new("Proton (needs Bridge)", "127.0.0.1", 1143, "Bridge password",
             "Needs Proton Mail Bridge running (paid Proton plan). Copy the address and password Bridge shows."),
@@ -43,11 +46,40 @@ public partial class InboxesWindow : Window
         Port.Text = p.Port.ToString();
         Hint.Text = p.Hint;
         PasswordLabel.Text = p.PasswordLabel;
+        var google = p.Host == GoogleInbox.Host;
+        AddressLabel.Text = google ? "Client ID" : "Email address";
+        AddButton.Content = google ? "Sign in with Google" : "Test and add";
         ServerRow.Visibility = p.Host.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async Task SignInWithGoogleAsync()
+    {
+        var clientId = Address.Text.Trim();
+        var secret = Password.Password.Trim();
+        if (clientId.Length == 0 || secret.Length == 0) { Status.Text = "Enter the Client ID and Client secret."; return; }
+
+        AddButton.IsEnabled = false;
+        Status.Text = "Finish signing in with your browser…";
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+            var (email, refresh) = await GoogleInbox.SignInAsync(clientId, secret,
+                uri => Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }), timeout.Token);
+            _vault.AddInbox(new MailInbox { Address = email, Host = GoogleInbox.Host, ClientId = clientId },
+                            GoogleInbox.PackSecret(secret, refresh));
+            await _vault.SaveAsync();
+            Reload();
+            Status.Text = $"Connected {email}.";
+        }
+        catch (OperationCanceledException) { Status.Text = "Sign-in timed out."; }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { Status.Text = ex.Message; }
+        finally { AddButton.IsEnabled = true; }
     }
 
     private async void Add_Click(object sender, RoutedEventArgs e)
     {
+        if (Host.Text == GoogleInbox.Host) { await SignInWithGoogleAsync(); return; }
+
         var address = Address.Text.Trim();
         if (address.Length == 0 || Password.Password.Length == 0 || Host.Text.Trim().Length == 0 ||
             !int.TryParse(Port.Text, out var port))
