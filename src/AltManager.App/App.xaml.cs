@@ -48,6 +48,7 @@ public partial class App : Application
         }
 
         var settings = AppSettings.Load();
+        Services.Theme.WatchWindows();
         Services.Theme.GlassFrost = settings.GlassFrost;
         Services.Theme.ApplyTheme(settings.Theme, settings.AccentColor);
         _vm = new MainViewModel(vault, new RobloxApiClient(), new ProcessTracker(), guard, new DialogService(), settings);
