@@ -423,6 +423,29 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         int ok = 0;
         var failed = new List<string>();
 
+        if (_settings.ParallelBrowserTasks)
+        {
+            var saving = new SemaphoreSlim(1, 1); // accounts are stored one at a time
+            await Task.WhenAll(creds.Select(async (c, slot) =>
+            {
+                var r = await _dialogs.BulkBrowserLoginAsync(ua, c.Item1, c.Item2, $"{slot + 1}/{creds.Count}", slot);
+                await saving.WaitAsync();
+                try
+                {
+                    if (r.WrongPassword) failed.Add($"{c.Item1} (incorrect username or password)");
+                    else if (r.Cookie is null) failed.Add($"{c.Item1} ({(r.NeedsManual ? "verification not completed" : "window closed")})");
+                    else
+                    {
+                        var (added, why) = await TryAddCookieAsync(r.Cookie, group, c.Item1, c.Item2);
+                        if (added) ok++; else failed.Add($"{c.Item1} ({why})");
+                    }
+                    StatusMessage = $"Bulk import: {ok} added, {failed.Count} failed…";
+                }
+                finally { saving.Release(); }
+            }));
+            creds = Array.Empty<(string, string)>();
+        }
+
         for (var i = 0; i < creds.Count; i++)
         {
             var (user, pass) = creds[i];
@@ -751,7 +774,20 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         // can be solved. The direct API call gets refused with "Challenge is required".
         int ok = 0;
         var failed = new List<string>();
-        for (var i = 0; i < targets.Count; i++)
+        if (_settings.ParallelBrowserTasks)
+        {
+            StatusMessage = $"Joining group with {targets.Count} account(s) at once…";
+            await Task.WhenAll(targets.Select(async (t, slot) =>
+            {
+                string cookie;
+                try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); return; }
+                var r = await _dialogs.JoinGroupInBrowserAsync(_api, cookie, t.Model.Id.ToString(), t.Label, t.UserId, groupId,
+                                                               $"{slot + 1}/{targets.Count}", slot);
+                if (r == Views.GroupJoinResult.Joined) ok++;
+                else failed.Add($"{t.Label} ({(r == Views.GroupJoinResult.Pending ? "waiting for group approval" : "skipped")})");
+            }));
+        }
+        else for (var i = 0; i < targets.Count; i++)
         {
             var t = targets[i];
             StatusMessage = $"Joining group {i + 1}/{targets.Count}: {t.Label}…";

@@ -26,6 +26,10 @@ public partial class WebLoginWindow : Window
     private readonly bool _autoSubmit;
     private readonly bool _abortOnChallenge;
     private readonly string? _totpSecret;
+    private readonly string? _profileKey; // own browser profile, so simultaneous logins can't share cookies
+
+    /// <summary>Set when opened with Show() rather than ShowDialog().</summary>
+    public bool Modeless { get; init; }
     private int _totpAttempts;
     private DateTime _lastTotpAt;
     private bool _autofilled;
@@ -54,8 +58,9 @@ public partial class WebLoginWindow : Window
     /// <param name="abortOnChallenge">Bulk auto only: detect and prompt for a verification challenge.</param>
     public WebLoginWindow(string? customUserAgent = null, (string User, string Pass)? credentials = null,
                           string? progress = null, bool autoSubmit = true, bool abortOnChallenge = true,
-                          string? totpSecret = null)
+                          string? totpSecret = null, string? profileKey = null)
     {
+        _profileKey = profileKey;
         _customUserAgent = customUserAgent;
         _credentials = credentials;
         _autoSubmit = autoSubmit;
@@ -84,7 +89,9 @@ public partial class WebLoginWindow : Window
     {
         try
         {
-            var env = await WebViewEnvironmentFactory.GetAsync();
+            var env = await (_profileKey is null
+                ? WebViewEnvironmentFactory.GetAsync()
+                : WebViewEnvironmentFactory.GetForProfileAsync(_profileKey));
             await Browser.EnsureCoreWebView2Async(env);
         }
         catch (WebView2RuntimeNotFoundException)
@@ -201,7 +208,7 @@ public partial class WebLoginWindow : Window
         StatusText.Text = "Signed in — saving account…";
 
         await ClearRobloxSessionCookiesAsync();
-        DialogResult = true;
+        if (Modeless) Close(); else DialogResult = true;
     }
 
     /// <summary>

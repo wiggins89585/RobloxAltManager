@@ -29,6 +29,7 @@ public partial class SettingsWindow : Window
         AutoStartup.IsChecked = _s.AutoValidateOnStartup;
         Interval.Text = _s.AutoValidateIntervalMinutes.ToString();
         AutoRejoin.IsChecked = _s.AutoRejoin;
+        ParallelBrowser.IsChecked = _s.ParallelBrowserTasks;
         Streamer.IsChecked = _s.StreamerMode;
         ConfirmCopy.IsChecked = _s.ConfirmBeforeCopyPassword;
         ClipClear.Text = _s.ClipboardClearSeconds.ToString();
@@ -145,6 +146,7 @@ public partial class SettingsWindow : Window
         _s.AutoValidateOnStartup = AutoStartup.IsChecked == true;
         _s.AutoValidateIntervalMinutes = ParseClamp(Interval.Text, 0, 0, 1440);
         _s.AutoRejoin = AutoRejoin.IsChecked == true;
+        _s.ParallelBrowserTasks = ParallelBrowser.IsChecked == true;
         _s.StreamerMode = Streamer.IsChecked == true;
         _s.ConfirmBeforeCopyPassword = ConfirmCopy.IsChecked == true;
         _s.ClipboardClearSeconds = ParseClamp(ClipClear.Text, 20, 0, 600);

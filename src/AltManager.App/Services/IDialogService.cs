@@ -14,6 +14,11 @@ public interface IDialogService
     (IReadOnlyList<(string User, string Pass)> Credentials, string Group, int DelaySeconds)? BulkLoginInput(IEnumerable<string> groups);
     /// <summary>Bulk browser login: fills + submits automatically; keeps the window open for verification challenges.</summary>
     BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress, string? totpSecret = null);
+    /// <summary>Non-modal bulk login in its own profile; <paramref name="slot"/> also staggers the window.</summary>
+    Task<BrowserLoginResult> BulkBrowserLoginAsync(string? customUserAgent, string username, string password, string progress, int slot);
+    /// <summary>Non-modal group join, for running several at once.</summary>
+    Task<Views.GroupJoinResult> JoinGroupInBrowserAsync(RobloxApiClient api, string cookie, string profileKey, string label,
+                                                        long userId, long groupId, string progress, int slot);
     /// <summary>Opens one account's group page, joins, and returns once it's done (modal).</summary>
     Views.GroupJoinResult JoinGroupInBrowser(RobloxApiClient api, string cookie, string profileKey, string label,
                                              long userId, long groupId, string progress);
@@ -75,6 +80,35 @@ public sealed class DialogService : IDialogService
         var w = new WebLoginWindow(customUserAgent, (username, password), progress, totpSecret: totpSecret) { Owner = Owner };
         w.ShowDialog();
         return new BrowserLoginResult(w.CapturedCookie, w.NeedsManual, w.WrongPassword);
+    }
+
+    public Task<BrowserLoginResult> BulkBrowserLoginAsync(string? customUserAgent, string username, string password, string progress, int slot)
+    {
+        var w = new WebLoginWindow(customUserAgent, (username, password), progress, profileKey: $"bulk-{slot}") { Modeless = true };
+        return ShowModelessAsync(w, slot, () => new BrowserLoginResult(w.CapturedCookie, w.NeedsManual, w.WrongPassword));
+    }
+
+    public Task<GroupJoinResult> JoinGroupInBrowserAsync(RobloxApiClient api, string cookie, string profileKey, string label,
+                                                         long userId, long groupId, string progress, int slot)
+    {
+        var w = new GroupJoinWindow(api, cookie, profileKey, label, userId, groupId, progress);
+        return ShowModelessAsync(w, slot, () => w.Result);
+    }
+
+    /// <summary>Shows a window in a tiled position and completes when it closes.</summary>
+    private static Task<T> ShowModelessAsync<T>(Window w, int slot, Func<T> result)
+    {
+        var done = new TaskCompletionSource<T>();
+        w.WindowStartupLocation = WindowStartupLocation.Manual;
+        w.Width = 480;
+        w.Height = 640;
+        var area = SystemParameters.WorkArea;
+        var perRow = Math.Max(1, (int)((area.Width - 480) / 60));
+        w.Left = area.Left + slot % perRow * 60;
+        w.Top = area.Top + slot % 6 * 40;
+        w.Closed += (_, _) => done.TrySetResult(result());
+        w.Show();
+        return done.Task;
     }
 
     public GroupJoinResult JoinGroupInBrowser(RobloxApiClient api, string cookie, string profileKey, string label,

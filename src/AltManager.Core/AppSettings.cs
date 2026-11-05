@@ -63,6 +63,8 @@ public sealed class AppSettings
     public int AutoValidateIntervalMinutes { get; set; }   // 0 = off
     /// <summary>Relaunch a client back into its game if it closes unexpectedly (not when you close it).</summary>
     public bool AutoRejoin { get; set; }
+    /// <summary>Run bulk logins and group joins in simultaneous windows instead of one at a time.</summary>
+    public bool ParallelBrowserTasks { get; set; }
 
     // Privacy
     public bool StreamerMode { get; set; }

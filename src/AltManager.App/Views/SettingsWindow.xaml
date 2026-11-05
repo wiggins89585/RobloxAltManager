@@ -33,6 +33,10 @@
                 <TextBox x:Name="Interval" Width="48" Margin="8,0,6,0"/>
                 <TextBlock Text="minutes (0 = off)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
             </StackPanel>
+            <CheckBox x:Name="ParallelBrowser" Content="Do bulk logins and group joins all at once"
+                      Margin="0,8,0,0" Foreground="{DynamicResource Fg}"/>
+            <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="24,2,0,0" Foreground="#F0B232"
+                       Text="Warning: this probably won't work well. Roblox is likely to rate-limit you or show more puzzles, and every account opens its own window."/>
             <CheckBox x:Name="AutoRejoin" Content="Auto-rejoin a client into its game if it closes unexpectedly"
                       Margin="0,8,0,0" Foreground="{DynamicResource Fg}"/>
 
