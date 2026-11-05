@@ -1,0 +1,55 @@
+<Window x:Class="AltManager.App.Views.SignupInputWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Create a Roblox account" SizeToContent="Height" Width="420" MinWidth="380"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{DynamicResource BgSolid}" Foreground="{DynamicResource Fg}">
+    <StackPanel Margin="16">
+        <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,0,0,12"
+                   Text="Fill these in, then the browser window only needs you to solve the puzzle. The account is added to the selected group."/>
+
+        <TextBlock Text="Username" Style="{StaticResource Label}" Margin="0,0,0,2"/>
+        <DockPanel Margin="0,0,0,10">
+            <Button DockPanel.Dock="Right" Content="Random" Padding="10,2" Margin="6,0,0,0" Click="RandomUser_Click"/>
+            <TextBox x:Name="UsernameBox"/>
+        </DockPanel>
+
+        <TextBlock Text="Password" Style="{StaticResource Label}" Margin="0,0,0,2"/>
+        <DockPanel Margin="0,0,0,10">
+            <Button DockPanel.Dock="Right" Content="Random" Padding="10,2" Margin="6,0,0,0" Click="RandomPass_Click"/>
+            <TextBox x:Name="PasswordBox"/>
+        </DockPanel>
+
+        <TextBlock Text="Birthday" Style="{StaticResource Label}" Margin="0,0,0,2"/>
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="70"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="90"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox x:Name="MonthBox" Grid.Column="0"/>
+            <ComboBox x:Name="DayBox" Grid.Column="2"/>
+            <ComboBox x:Name="YearBox" Grid.Column="4"/>
+        </Grid>
+
+        <TextBlock Text="Gender" Style="{StaticResource Label}" Margin="0,0,0,2"/>
+        <ComboBox x:Name="GenderBox" Margin="0,0,0,10"/>
+
+        <TextBlock Text="How many accounts" Style="{StaticResource Label}" Margin="0,0,0,2"/>
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0" Style="{StaticResource Label}"
+                       Text="each one opens its own window to solve the puzzle" TextWrapping="Wrap" Width="200"/>
+            <TextBox x:Name="CountBox" Width="56" HorizontalAlignment="Left" Text="1"/>
+        </DockPanel>
+        <TextBlock x:Name="BulkHint" Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Visibility="Collapsed" Foreground="{DynamicResource Muted}"
+                   Text="For more than one, each account gets a random username and password; the birthday and gender above are reused."/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="OkButton" Content="Open sign-up" Width="120" Click="Ok_Click" Style="{StaticResource AccentButton}"/>
+            <Button Content="Cancel" Width="90" IsCancel="True" Margin="0"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

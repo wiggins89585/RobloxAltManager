@@ -1,0 +1,49 @@
+<Window x:Class="AltManager.App.Views.SignupPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Accounts to create" Width="560" Height="560" MinWidth="460" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgSolid}" Foreground="{DynamicResource Fg}">
+    <DockPanel Margin="14">
+        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,0,0,10"
+                   Text="These accounts will be created, each in its own window so you can solve the puzzle. Edit any of them first — the birthday and gender you chose are used for all."/>
+
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Regenerate all" Width="120" Click="Regenerate_Click"/>
+            <Button x:Name="CreateButton" Content="Create" Width="110" Click="Create_Click" Style="{StaticResource AccentButton}"/>
+            <Button Content="Cancel" Width="90" IsCancel="True" Margin="0"/>
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="26"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="1" Text="Username" Style="{StaticResource Label}"/>
+            <TextBlock Grid.Column="3" Text="Password" Style="{StaticResource Label}"/>
+        </Grid>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="Rows">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Index}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Muted}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Grid.Column="3" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

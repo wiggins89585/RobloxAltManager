@@ -160,6 +160,8 @@
                         ToolTip="Import .ROBLOSECURITY cookies"/>
                 <Button DockPanel.Dock="Left" Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
                         ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
+                <Button DockPanel.Dock="Left" Content="＋ Create" Style="{StaticResource ToolbarButton}" Command="{Binding CreateAccountCommand}"
+                        ToolTip="Create a new Roblox account in a browser window"/>
                 <Button DockPanel.Dock="Left" Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
                         ToolTip="Log in several accounts from a user:pass,user:pass list"/>
                 <Button DockPanel.Dock="Left" Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"

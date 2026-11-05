@@ -11,6 +11,10 @@ public interface IDialogService
 {
     (IReadOnlyList<string> Cookies, string Group)? ImportCookies(IEnumerable<string> groups);
     string? BrowserLogin(string? customUserAgent);
+    /// <summary>Asks for the new account details; for several, shows an editable preview. Null if cancelled.</summary>
+    IReadOnlyList<SignupInput>? GetSignupPlan();
+    /// <summary>Opens Roblox's sign-up page pre-filled; the user solves the CAPTCHA. Null if cancelled.</summary>
+    SignupResult? RunSignup(SignupInput details, string? customUserAgent);
     (IReadOnlyList<(string User, string Pass)> Credentials, string Group, int DelaySeconds)? BulkLoginInput(IEnumerable<string> groups);
     /// <summary>Bulk browser login: fills + submits automatically; keeps the window open for verification challenges.</summary>
     BrowserLoginResult BulkBrowserLogin(string? customUserAgent, string username, string password, string progress, string? totpSecret = null);
@@ -55,6 +59,9 @@ public interface IDialogService
 /// <param name="NeedsManual">Auto-login detected a verification challenge that needs user input in the open window.</param>
 public readonly record struct BrowserLoginResult(string? Cookie, bool NeedsManual, bool WrongPassword);
 
+/// <summary>A freshly created account: its cookie, plus the username/password the user typed if we could read them.</summary>
+public readonly record struct SignupResult(string Cookie, string? Username, string? Password);
+
 public sealed class DialogService : IDialogService
 {
     private static Window? Owner => Application.Current.MainWindow;
@@ -69,6 +76,29 @@ public sealed class DialogService : IDialogService
     {
         var w = new WebLoginWindow(customUserAgent) { Owner = Owner };
         return w.ShowDialog() == true ? w.CapturedCookie : null;
+    }
+
+    public IReadOnlyList<SignupInput>? GetSignupPlan()
+    {
+        var input = new SignupInputWindow { Owner = Owner };
+        if (input.ShowDialog() != true || input.Result is not { } details) return null;
+        if (input.Count == 1) return new[] { details };
+
+        // The first account uses the typed details; the rest start random (editable in the preview).
+        var plan = new List<SignupInput> { details };
+        for (var i = 1; i < input.Count; i++)
+            plan.Add(details with { Username = RandomCredentials.Username(), Password = RandomCredentials.Password() });
+
+        var preview = new SignupPreviewWindow(plan) { Owner = Owner };
+        return preview.ShowDialog() == true ? preview.Accounts : null;
+    }
+
+    public SignupResult? RunSignup(SignupInput details, string? customUserAgent)
+    {
+        var w = new SignupWindow(details, customUserAgent) { Owner = Owner };
+        return w.ShowDialog() == true && w.CapturedCookie is { } cookie
+            ? new SignupResult(cookie, w.FinalUsername, details.Password)
+            : null;
     }
 
     public (IReadOnlyList<(string User, string Pass)> Credentials, string Group, int DelaySeconds)? BulkLoginInput(IEnumerable<string> groups)

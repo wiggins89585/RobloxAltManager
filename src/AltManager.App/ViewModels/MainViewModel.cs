@@ -413,6 +413,40 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     }
 
     [RelayCommand]
+    private async Task CreateAccountAsync()
+    {
+        var ua = string.IsNullOrWhiteSpace(CustomUserAgent) ? null : CustomUserAgent;
+        var plan = _dialogs.GetSignupPlan();
+        if (plan is null || plan.Count == 0) return;
+
+        var group = SelectedGroup == AllGroups ? "Ungrouped" : SelectedGroup;
+        int ok = 0;
+        var failed = new List<string>();
+
+        for (var i = 0; i < plan.Count; i++)
+        {
+            var result = _dialogs.RunSignup(plan[i], ua);
+            if (result is not { } r)
+            {
+                // Window closed without finishing: give up on the first, otherwise stop the batch here.
+                if (i == 0) return;
+                break;
+            }
+
+            await RunBusy($"Saving {r.Username}…", async () =>
+            {
+                var (added, why) = await TryAddCookieAsync(r.Cookie, group, r.Username, r.Password);
+                if (added) ok++; else failed.Add($"{r.Username} ({why})");
+            });
+            StatusMessage = plan.Count > 1 ? $"Created {ok}/{plan.Count}…" : StatusMessage;
+        }
+
+        StatusMessage = failed.Count == 0
+            ? (ok == 1 ? "Account created and added." : $"Created and added {ok} accounts.")
+            : $"Created {ok}, failed {failed.Count}: {string.Join("; ", failed)}";
+    }
+
+    [RelayCommand]
     private async Task BulkLoginAsync()
     {
         var input = _dialogs.BulkLoginInput(Groups.Where(g => g != AllGroups));

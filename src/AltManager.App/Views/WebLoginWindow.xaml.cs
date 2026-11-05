@@ -113,6 +113,9 @@ public partial class WebLoginWindow : Window
         // Tracking prevention partitions/block third-party storage → Arkose iframe re-challenges.
         core.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.None;
 
+        // We sign in with passwords; stop Roblox offering a passkey so Windows never pops its passkey dialog.
+        await core.AddScriptToExecuteOnDocumentCreatedAsync(SignupWindow.DisablePasskeysScript);
+
         core.NavigationStarting += (_, e) =>
         {
             if (!IsTrustedRobloxUri(e.Uri))
@@ -193,11 +196,15 @@ public partial class WebLoginWindow : Window
         // Timer ticks and NavigationCompleted can overlap; only one check runs at a time.
         if (_captured || _checking || Browser.CoreWebView2 is null) return;
         _checking = true;
-        CoreWebView2Cookie? sec;
+        CoreWebView2Cookie? sec = null;
         try
         {
-            var cookies = await Browser.CoreWebView2.CookieManager.GetCookiesAsync("https://www.roblox.com");
-            sec = cookies.FirstOrDefault(c => c.Name == RobloxCookie.Name && !string.IsNullOrEmpty(c.Value));
+            foreach (var domain in new[] { "https://www.roblox.com", "https://roblox.com", "https://web.roblox.com" })
+            {
+                var cookies = await Browser.CoreWebView2.CookieManager.GetCookiesAsync(domain);
+                sec = cookies.FirstOrDefault(c => c.Name == RobloxCookie.Name && !string.IsNullOrEmpty(c.Value));
+                if (sec is not null) break;
+            }
         }
         finally { _checking = false; }
         if (sec is null || _captured) return;
@@ -264,7 +271,7 @@ public partial class WebLoginWindow : Window
 
     private static bool IsTrustedRobloxUri(Uri uri) =>
         uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort && string.IsNullOrEmpty(uri.UserInfo) &&
-        uri.Host is "www.roblox.com" or "roblox.com" or "auth.roblox.com";
+        (uri.Host == "roblox.com" || uri.Host.EndsWith(".roblox.com", StringComparison.OrdinalIgnoreCase) || uri.Host == "arkoselabs.com" || uri.Host.EndsWith(".arkoselabs.com", StringComparison.OrdinalIgnoreCase) || uri.Host == "funcaptcha.com" || uri.Host.EndsWith(".funcaptcha.com", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// After an auto-submit, watch for a verification / 2-step page (email code, etc.) that the
