@@ -34,6 +34,7 @@ public static class Theme
         new ThemePreset("Dracula",       "#282A36", "#343746", "#44475A", "#4F5267", "#44475A", "#F8F8F2", "#9FA3B3", "#BD93F9", "#3B3A5A"),
         new ThemePreset("Nord",          "#2E3440", "#3B4252", "#434C5E", "#4C566A", "#434C5E", "#ECEFF4", "#A9B2C3", "#88C0D0", "#3A4961"),
         new ThemePreset("Dark Glass",    "#101319", "#CC20242C", "#A62A2F39", "#8C343A46", "#40FFFFFF", "#F1F4F9", "#AEB7C6", "#6EA8FE", "#663B5C94"),
+        new ThemePreset("Roblox Glass",  "#111213", "#CC232527", "#A62E3033", "#8C393B3D", "#40FFFFFF", "#FFFFFF", "#BDBEBE", "#00A2FF", "#66005A8C"),
         new ThemePreset("Catppuccin",    "#1E1E2E", "#2A2A3C", "#313244", "#45475A", "#45475A", "#CDD6F4", "#A6ADC8", "#CBA6F7", "#433E5E"),
         new ThemePreset("Tokyo Night",   "#16161E", "#1F2335", "#292E42", "#343A55", "#2F344D", "#C0CAF5", "#8990B3", "#7AA2F7", "#2B3A63"),
         new ThemePreset("One Dark",      "#21252B", "#282C34", "#323842", "#3E4451", "#3E4451", "#DCDFE4", "#9DA5B4", "#61AFEF", "#2F4560"),
@@ -83,8 +84,9 @@ public static class Theme
             // anything behind the window, even with the slider at clear.
             var f = Math.Clamp(GlassFrost, 0, 100) / 100.0;
             byte top = (byte)(0x70 + f * (0xE6 - 0x70));            // panel top alpha: ~44% … ~90%
-            var dark = t.Name == "Dark Glass";
-            Color Tint(byte a) => dark ? Color.FromArgb(a, 0x20, 0x24, 0x2C) : White(a);
+            var dark = IsDarkGlass(t.Name);
+            var roblox = t.Name == "Roblox Glass";
+            Color Tint(byte a) => !dark ? White(a) : roblox ? Color.FromArgb(a, 0x23, 0x25, 0x27) : Color.FromArgb(a, 0x20, 0x24, 0x2C);
             byte Up(int by) => (byte)Math.Min(255, top + by);
             app.Resources["Bg"]     = new SolidColorBrush(dark
                 ? Color.FromArgb(top, 0x10, 0x13, 0x19)
@@ -94,7 +96,7 @@ public static class Theme
             app.Resources["Hover"]  = new SolidColorBrush(dark ? Color.FromArgb(Up(0x18), 0x3A, 0x41, 0x4E) : White(Up(0x40)));
             app.Resources["Line"]   = new SolidColorBrush(dark ? Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF) : White(Up(0x1E)));
             app.Resources["Selection"] = new SolidColorBrush(dark
-                ? Color.FromArgb(Up(0x10), 0x3B, 0x5C, 0x94)
+                ? (roblox ? Color.FromArgb(Up(0x10), 0x00, 0x5A, 0x8C) : Color.FromArgb(Up(0x10), 0x3B, 0x5C, 0x94))
                 : Color.FromArgb(Up(0x20), 0xB6, 0xD2, 0xFB));
         }
 
@@ -121,13 +123,15 @@ public static class Theme
     /// <summary>Which Win11 backdrop a theme wants behind its (translucent) surfaces.</summary>
     public static WindowBackdrop.Kind BackdropFor(string? name) => Find(name).Name switch
     {
-        "Liquid Glass" or "Dark Glass" => WindowBackdrop.Kind.Acrylic, // stronger blur = liquid glass
+        "Liquid Glass" or "Dark Glass" or "Roblox Glass" => WindowBackdrop.Kind.Acrylic, // stronger blur = liquid glass
         "macOS"         => WindowBackdrop.Kind.Mica,
         "Frutiger Aero" => WindowBackdrop.Kind.Mica,
         _               => WindowBackdrop.Kind.None,
     };
 
-    private static bool IsGlass(string name) => name is "Liquid Glass" or "Dark Glass";
+    private static bool IsDarkGlass(string name) => name is "Dark Glass" or "Roblox Glass";
+
+    private static bool IsGlass(string name) => name is "Liquid Glass" or "Dark Glass" or "Roblox Glass";
 
     /// <summary>Re-applies the current theme's backdrop to every open window.</summary>
     public static void ReapplyBackdrop() => ApplyBackdrop();
@@ -136,14 +140,14 @@ public static class Theme
     public static void WatchWindows() =>
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, _) =>
         {
-            if (s is Window w) WindowBackdrop.Apply(w, BackdropFor(_currentTheme), _currentTheme == "Dark Glass");
+            if (s is Window w) WindowBackdrop.Apply(w, BackdropFor(_currentTheme), IsDarkGlass(_currentTheme));
         }));
 
     private static void ApplyBackdrop()
     {
         if (Application.Current is not { } app) return;
         foreach (Window w in app.Windows)
-            WindowBackdrop.Apply(w, BackdropFor(_currentTheme), _currentTheme == "Dark Glass");
+            WindowBackdrop.Apply(w, BackdropFor(_currentTheme), IsDarkGlass(_currentTheme));
     }
 
     private static Brush BuildTitleBar(ThemePreset t) => t.Name switch
@@ -152,6 +156,7 @@ public static class Theme
         "Frutiger Aero" => VGrad("#86E3F7", "#28A9DD", "#1687C4"),   // glossy sky
         "Liquid Glass"  => VGrad("#CCFFFFFF", "#A6EAF2FC", "#8CD6E6F6"), // translucent frost (acrylic shows through)
         "Dark Glass"    => VGrad("#CC20242C", "#A61A1E26"),
+        "Roblox Glass"  => VGrad("#CC232527", "#A6191B1D"),
         "macOS"         => VGrad("#F6F6F8", "#E4E4E7", "#D6D6DA"),       // light brushed-metal bar
         "Light"         => Solid("#E7E9EC"),
         _               => Solid(t.Bg),                             // dark themes: flat
