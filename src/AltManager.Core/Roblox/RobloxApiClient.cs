@@ -327,6 +327,23 @@ public sealed class RobloxApiClient : IDisposable
                                       or KeyNotFoundException or InvalidOperationException) { return null; }
     }
 
+    /// <summary>Adds an email to the account; Roblox then sends it a verification link.</summary>
+    public async Task<(bool Ok, string Message)> SetEmailAsync(string email, string password, string cookie, CancellationToken ct = default)
+    {
+        try
+        {
+            using var res = await SendWithCsrfAsync(() =>
+            {
+                var r = Build(HttpMethod.Post, "https://accountsettings.roblox.com/v1/email", cookie);
+                r.Content = JsonContent.Create(new { emailAddress = email, password });
+                return r;
+            }, cookie, ct);
+            if (res.IsSuccessStatusCode) return (true, "added");
+            return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
+    }
+
     /// <summary>Whether the account has Premium (its own cookie).</summary>
     public async Task<bool?> GetPremiumAsync(long userId, string cookie, CancellationToken ct = default)
     {

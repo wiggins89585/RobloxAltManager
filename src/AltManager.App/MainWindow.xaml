@@ -69,6 +69,9 @@
                 <MenuItem Header="⇄  Set proxy…" CommandParameter="{Binding}"
                           ToolTip="Route this account's web-API calls (validation / launch auth) through a proxy"
                           Command="{Binding PlacementTarget.Tag.SetProxyForSelectedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="✉  Add emails…" CommandParameter="{Binding}"
+                          ToolTip="Add an email to this account, or to every checked account"
+                          Command="{Binding PlacementTarget.Tag.AddEmailsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                 <MenuItem Header="🔐  Set 2FA secret…" CommandParameter="{Binding}"
                           ToolTip="Store the authenticator key so logins answer 2-step automatically"
                           Command="{Binding PlacementTarget.Tag.SetTotpSecretCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>

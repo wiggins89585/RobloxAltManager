@@ -830,6 +830,40 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     }
 
     [RelayCommand]
+    private async Task AddEmailsAsync(AccountViewModel? vm)
+    {
+        var targets = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
+        if (targets.Count == 0) { StatusMessage = "Select accounts first."; return; }
+        var emails = _dialogs.BulkEmailInput(targets.Select(t => t.Model.Username));
+        if (emails is null) return;
+
+        int ok = 0, done = 0;
+        var failed = new List<string>();
+        var chosen = targets.Where(t => emails.ContainsKey(t.Model.Username)).ToList();
+        foreach (var t in chosen)
+        {
+            StatusMessage = $"Adding emails {++done}/{chosen.Count}: {t.Label}…";
+            string cookie;
+            string? password;
+            try { cookie = _vault.GetCookie(t.Model); password = _vault.GetPassword(t.Model); }
+            catch { failed.Add($"{t.Label} (couldn't read saved login)"); continue; }
+            if (string.IsNullOrEmpty(password)) { failed.Add($"{t.Label} (no saved password)"); continue; }
+
+            // Never replace an address: if Roblox won't say, leave the account alone.
+            var has = await _api.HasEmailAttachedAsync(cookie);
+            if (has is null) { failed.Add($"{t.Label} (couldn't check its current email)"); continue; }
+            if (has == true) { failed.Add($"{t.Label} (already has an email)"); continue; }
+
+            var (added, msg) = await _api.SetEmailAsync(emails[t.Model.Username], password, cookie);
+            if (added) ok++; else failed.Add($"{t.Label} ({msg})");
+            await Task.Delay(1000); // pace to avoid rate limits
+        }
+        StatusMessage = $"Added {ok}/{chosen.Count} email(s). Open each inbox to verify.";
+        Log(failed.Count > 0 ? ActivityLevel.Warn : ActivityLevel.Info, $"Add emails: {ok}/{chosen.Count} succeeded.");
+        if (failed.Count > 0) _dialogs.Error($"Added {ok}/{chosen.Count}.\n\nNot added:\n" + string.Join("\n", failed));
+    }
+
+    [RelayCommand]
     private void GroupPayout(AccountViewModel? vm)
     {
         var recipients = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();

@@ -19,6 +19,8 @@ public interface IDialogService
     /// <summary>Non-modal group join, for running several at once.</summary>
     Task<Views.GroupJoinResult> JoinGroupInBrowserAsync(RobloxApiClient api, string cookie, string profileKey, string label,
                                                         long userId, long groupId, string progress, int slot);
+    /// <summary>Asks for an email per username. Null if cancelled.</summary>
+    IReadOnlyDictionary<string, string>? BulkEmailInput(IEnumerable<string> usernames);
     /// <summary>Opens one account's group page, joins, and returns once it's done (modal).</summary>
     Views.GroupJoinResult JoinGroupInBrowser(RobloxApiClient api, string cookie, string profileKey, string label,
                                              long userId, long groupId, string progress);
@@ -109,6 +111,12 @@ public sealed class DialogService : IDialogService
         w.Closed += (_, _) => done.TrySetResult(result());
         w.Show();
         return done.Task;
+    }
+
+    public IReadOnlyDictionary<string, string>? BulkEmailInput(IEnumerable<string> usernames)
+    {
+        var w = new BulkEmailWindow(usernames) { Owner = Owner };
+        return w.ShowDialog() == true ? w.Emails : null;
     }
 
     public GroupJoinResult JoinGroupInBrowser(RobloxApiClient api, string cookie, string profileKey, string label,
