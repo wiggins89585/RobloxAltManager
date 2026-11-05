@@ -57,7 +57,9 @@ public static class WindowBackdrop
         if (HwndSource.FromHwnd(hwnd)?.CompositionTarget is { } ct)
             ct.BackgroundColor = enabled ? Colors.Transparent : Colors.Black;
 
-        if (enabled) window.Background = Brushes.Transparent;
+        // The main window's own panels carry the tint. Other windows need it here, or the frost slider has nothing to change.
+        if (enabled && window == Application.Current?.MainWindow) window.Background = Brushes.Transparent;
+        else if (enabled) window.SetResourceReference(Window.BackgroundProperty, "Bg");
         else window.SetResourceReference(Window.BackgroundProperty, "BgSolid");
     }
 

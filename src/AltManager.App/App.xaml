@@ -24,7 +24,7 @@
         <SolidColorBrush x:Key="Muted" Color="#949BA4"/>
         <SolidColorBrush x:Key="Accent" Color="#5865F2"/>
         <SolidColorBrush x:Key="AccentHover" Color="#4752C4"/>
-        <SolidColorBrush x:Key="Selection" Color="#33386A"/>
+        <SolidColorBrush x:Key="Selection" Color="#33386A"/><SolidColorBrush x:Key="ThumbBrush" Color="#4A4D55"/><SolidColorBrush x:Key="ThumbHoverBrush" Color="#5C606A"/>
         <SolidColorBrush x:Key="TitleBar" Color="#1E1F22"/>
         <SolidColorBrush x:Key="TitleBarText" Color="#DBDEE1"/>
 
@@ -392,17 +392,17 @@
             </Style.Triggers>
         </Style>
 
-        <!-- ===== Scrollbars (dark, slim) ===== -->
+        <!-- ===== Scrollbars (slim) ===== -->
         <Style x:Key="ScrollThumb" TargetType="Thumb">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="T" Background="#4A4D55" CornerRadius="4" Margin="2"/>
+                        <Border x:Name="T" Background="{DynamicResource ThumbBrush}" CornerRadius="4" Margin="2"/>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="T" Property="Background" Value="#5C606A"/>
+                                <Setter TargetName="T" Property="Background" Value="{DynamicResource ThumbHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

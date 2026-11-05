@@ -71,6 +71,11 @@ public static class Theme
         Set(app, "Muted", t.Muted);
         Set(app, "Selection", t.Selection);
 
+        // Scrollbars follow the text colour so they suit every theme, light or dark.
+        TryParseColor(t.Fg, out var fg);
+        app.Resources["ThumbBrush"] = new SolidColorBrush(Color.FromArgb(0x59, fg.R, fg.G, fg.B));
+        app.Resources["ThumbHoverBrush"] = new SolidColorBrush(Color.FromArgb(0x8C, fg.R, fg.G, fg.B));
+
         // Popups and windows without glass sit on nothing, so they need colours with no transparency.
         TryParseColor(t.Panel, out var popup);
         TryParseColor(t.Bg, out var solid);
