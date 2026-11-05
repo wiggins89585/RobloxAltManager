@@ -65,7 +65,7 @@ public partial class GroupJoinWindow : Window
         cm.AddOrUpdateCookie(c);
         _cookie = null;
 
-        core.Navigate($"https://www.roblox.com/communities/{_groupId}/");
+        core.Navigate($"https://www.roblox.com/communities/{_groupId}/about");
         _poll.Start();
     }
 
