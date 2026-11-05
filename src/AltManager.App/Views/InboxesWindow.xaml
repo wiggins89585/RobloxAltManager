@@ -15,7 +15,8 @@
             <TextBlock Text="Email address" Style="{StaticResource Label}" Margin="0,8,0,2"/>
             <TextBox x:Name="Address"/>
             <TextBlock x:Name="PasswordLabel" Text="App password" Style="{StaticResource Label}" Margin="0,8,0,2"/>
-            <PasswordBox x:Name="Password"/>
+            <PasswordBox x:Name="Password" Padding="6,3" Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}"
+                         CaretBrush="{DynamicResource Fg}" BorderBrush="{DynamicResource Line}"/>
             <StackPanel x:Name="ServerRow" Orientation="Horizontal" Margin="0,8,0,0">
                 <TextBlock Text="Server" VerticalAlignment="Center"/>
                 <TextBox x:Name="Host" Width="210" Margin="8,0,12,0"/>

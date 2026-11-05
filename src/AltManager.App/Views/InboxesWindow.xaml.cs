@@ -13,7 +13,7 @@ public partial class InboxesWindow : Window
     private static readonly Preset[] Presets =
     {
         new("Gmail", "imap.gmail.com", 993, "App password",
-            "Turn on 2-Step Verification, then create an app password in your Google account."),
+            "Use a 16-letter app password from myaccount.google.com/apppasswords, not your normal password."),
         new("Proton (needs Bridge)", "127.0.0.1", 1143, "Bridge password",
             "Needs Proton Mail Bridge running (paid Proton plan). Copy the address and password Bridge shows."),
         new("Other IMAP", "", 993, "Password", "Enter your provider's IMAP server. Outlook isn't supported yet."),
@@ -57,12 +57,14 @@ public partial class InboxesWindow : Window
         }
 
         var inbox = new MailInbox { Address = address, Host = Host.Text.Trim(), Port = port };
+        // Google displays app passwords in groups of four; the spaces aren't part of it.
+        var password = inbox.Host == "imap.gmail.com" ? Password.Password.Replace(" ", "") : Password.Password;
         AddButton.IsEnabled = false;
         Status.Text = "Connecting…";
         try
         {
-            await InboxReader.TestAsync(inbox, Password.Password);
-            _vault.AddInbox(inbox, Password.Password);
+            await InboxReader.TestAsync(inbox, password);
+            _vault.AddInbox(inbox, password);
             await _vault.SaveAsync();
             Password.Clear();
             Address.Clear();
