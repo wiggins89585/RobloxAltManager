@@ -30,9 +30,9 @@ public partial class InboxesWindow : Window
     {
         new("Create a new project called Alt Manager.", "https://console.cloud.google.com"),
         new("Open the Gmail API page and click Enable.", "https://console.cloud.google.com/apis/library/gmail.googleapis.com"),
-        new("Go to Google Auth Platform (it may appear as OAuth consent screen) and click Get started. Choose External and fill in the name and your email."),
-        new("Under Audience > Test users, add every Gmail account you want to connect."),
-        new("Under Clients > Create client, choose Desktop app, then copy the Client ID and Client secret."),
+        new("Open the sign-in setup page, make sure Alt Manager is the project selected at the top, and click Get started. Choose External and fill in the name and your email.", "https://console.cloud.google.com/auth/overview"),
+        new("On the Audience page, under Test users, add every Gmail account you want to connect.", "https://console.cloud.google.com/auth/audience"),
+        new("On the Clients page, click Create client, choose Desktop app, then copy the Client ID and Client secret.", "https://console.cloud.google.com/auth/clients"),
         new("Back here, paste both and click Sign in with Google."),
         new("In your browser, sign in. At the \"Google hasn't verified this app\" warning, click Advanced, then Go to Alt Manager."),
         new("Repeat from the previous two steps for each Gmail account, reusing the same Client ID and secret."),
