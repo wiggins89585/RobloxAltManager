@@ -58,7 +58,13 @@ public partial class InboxesWindow : Window
 
         var inbox = new MailInbox { Address = address, Host = Host.Text.Trim(), Port = port };
         // Google displays app passwords in groups of four; the spaces aren't part of it.
-        var password = inbox.Host == "imap.gmail.com" ? Password.Password.Replace(" ", "") : Password.Password;
+        var gmail = inbox.Host == "imap.gmail.com";
+        var password = gmail ? string.Concat(Password.Password.Where(c => !char.IsWhiteSpace(c))) : Password.Password;
+        if (gmail && password.Length != 16)
+        {
+            Status.Text = $"That's {password.Length} characters. A Gmail app password is exactly 16, so this looks like a normal password.";
+            return;
+        }
         AddButton.IsEnabled = false;
         Status.Text = "Connecting…";
         try

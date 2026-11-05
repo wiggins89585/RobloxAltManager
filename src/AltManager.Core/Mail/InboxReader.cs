@@ -67,6 +67,7 @@ public static class InboxReader
             if (local) client.ServerCertificateValidationCallback = (_, _, _, _) => true;
             await client.ConnectAsync(inbox.Host, inbox.Port,
                 local ? SecureSocketOptions.StartTls : SecureSocketOptions.SslOnConnect, ct);
+            client.AuthenticationMechanisms.Remove("XOAUTH2"); // these are passwords, not OAuth tokens
             await client.AuthenticateAsync(inbox.Address, password, ct);
             await client.Inbox.OpenAsync(FolderAccess.ReadOnly, ct);
             return client;
