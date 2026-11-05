@@ -118,6 +118,11 @@ public partial class SettingsWindow : Window
         base.OnClosed(e);
     }
 
+    private void Inboxes_Click(object sender, RoutedEventArgs e)
+    {
+        if (Services.MailCodes.Vault is { } vault) new InboxesWindow(vault) { Owner = this }.ShowDialog();
+    }
+
     private void CopyToken_Click(object sender, RoutedEventArgs e)
     {
         try { Clipboard.SetText(ApiToken.Text); } catch { /* clipboard busy */ }
