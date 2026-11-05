@@ -772,34 +772,58 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
         // Same approach as login: the real page in a browser window, where Roblox's verification
         // can be solved. The direct API call gets refused with "Challenge is required".
+        const int maxRounds = 3; // the first try plus two retries
         int ok = 0;
         var failed = new List<string>();
-        if (_settings.ParallelBrowserTasks)
+        var pending = targets;
+        var stopped = false;
+        for (var round = 1; round <= maxRounds && pending.Count > 0 && !stopped; round++)
         {
-            StatusMessage = $"Joining group with {targets.Count} account(s) at once…";
-            await Task.WhenAll(targets.Select(async (t, slot) =>
+            var refused = new List<AccountViewModel>();
+            void Tally(AccountViewModel t, Views.GroupJoinResult r)
             {
-                string cookie;
-                try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); return; }
-                var r = await _dialogs.JoinGroupInBrowserAsync(_api, cookie, t.Model.Id.ToString(), t.Label, t.UserId, groupId,
-                                                               $"{slot + 1}/{targets.Count}", slot);
                 if (r == Views.GroupJoinResult.Joined) ok++;
-                else failed.Add($"{t.Label} ({(r == Views.GroupJoinResult.Pending ? "waiting for group approval" : "skipped")})");
-            }));
+                else if (r == Views.GroupJoinResult.Failed) refused.Add(t);
+                else if (r == Views.GroupJoinResult.Pending) failed.Add($"{t.Label} (waiting for group approval)");
+                else if (r == Views.GroupJoinResult.Skipped) failed.Add($"{t.Label} (skipped)");
+                else failed.Add($"{t.Label} (stopped)");
+            }
+
+            if (round > 1)
+            {
+                StatusMessage = $"Retrying {pending.Count} failed account(s), try {round}/{maxRounds}, in 15s…";
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+
+            if (_settings.ParallelBrowserTasks && round == 1)
+            {
+                StatusMessage = $"Joining group with {pending.Count} account(s) at once…";
+                await Task.WhenAll(pending.Select(async (t, slot) =>
+                {
+                    string cookie;
+                    try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); return; }
+                    Tally(t, await _dialogs.JoinGroupInBrowserAsync(_api, cookie, t.Model.Id.ToString(), t.Label, t.UserId, groupId,
+                                                                    $"{slot + 1}/{pending.Count}", slot));
+                }));
+            }
+            else
+            {
+                // Retries always run one at a time: going all at once is the likeliest reason they failed.
+                for (var i = 0; i < pending.Count; i++)
+                {
+                    var t = pending[i];
+                    StatusMessage = $"Joining group {i + 1}/{pending.Count}: {t.Label}…";
+                    string cookie;
+                    try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); continue; }
+                    var r = _dialogs.JoinGroupInBrowser(_api, cookie, t.Model.Id.ToString(), t.Label, t.UserId, groupId,
+                                                        $"{i + 1}/{pending.Count}");
+                    Tally(t, r);
+                    if (r == Views.GroupJoinResult.Stopped) { stopped = true; break; }
+                }
+            }
+            pending = refused;
         }
-        else for (var i = 0; i < targets.Count; i++)
-        {
-            var t = targets[i];
-            StatusMessage = $"Joining group {i + 1}/{targets.Count}: {t.Label}…";
-            string cookie;
-            try { cookie = _vault.GetCookie(t.Model); } catch { failed.Add($"{t.Label} (no cookie)"); continue; }
-            var result = _dialogs.JoinGroupInBrowser(_api, cookie, t.Model.Id.ToString(), t.Label, t.UserId, groupId,
-                                                     $"{i + 1}/{targets.Count}");
-            if (result == Views.GroupJoinResult.Joined) ok++;
-            else if (result == Views.GroupJoinResult.Pending) failed.Add($"{t.Label} (waiting for group approval)");
-            else if (result == Views.GroupJoinResult.Skipped) failed.Add($"{t.Label} (skipped)");
-            else { failed.Add($"{t.Label} and any after it (stopped)"); break; }
-        }
+        failed.AddRange(pending.Select(t => $"{t.Label} (Roblox refused after {maxRounds} tries)"));
         StatusMessage = $"Joined group {groupId}: {ok}/{targets.Count}.";
         Log(failed.Count > 0 ? ActivityLevel.Warn : ActivityLevel.Info, $"Join group {groupId}: {ok}/{targets.Count} succeeded.");
         if (failed.Count > 0) _dialogs.Error($"Joined {ok}/{targets.Count}.\n\nFailed:\n" + string.Join("\n", failed));
