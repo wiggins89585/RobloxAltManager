@@ -61,11 +61,6 @@
 
             <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 
-            <TextBlock Text="EMAIL CODES" Style="{StaticResource Heading}"/>
-            <Button Content="Manage inboxes…" HorizontalAlignment="Left" Margin="0,6,0,0" Click="Inboxes_Click"/>
-
-            <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
-
             <TextBlock Text="VAULT BACKUP" Style="{StaticResource Heading}"/>
             <TextBlock Text="The backup is the encrypted vault file; it needs the same master password to open." Style="{StaticResource Label}" TextWrapping="Wrap"/>
             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">

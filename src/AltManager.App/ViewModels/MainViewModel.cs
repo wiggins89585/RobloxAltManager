@@ -66,7 +66,6 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
                          MultiInstanceGuard guard, IDialogService dialogs, AppSettings settings)
     {
         _vault = vault;
-        MailCodes.Vault = vault;
         _api = api;
         _tracker = tracker;
         _guard = guard;

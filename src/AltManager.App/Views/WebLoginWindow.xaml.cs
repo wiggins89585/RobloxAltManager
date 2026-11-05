@@ -34,7 +34,6 @@ public partial class WebLoginWindow : Window
     private DateTime _lastTotpAt;
     private bool _autofilled;
     private bool _submitted;
-    private DateTimeOffset? _submittedAt;
 
     /// <summary>
     /// Bulk auto-login hit a verification/2-step challenge (e.g. an email code).
@@ -257,7 +256,7 @@ public partial class WebLoginWindow : Window
             """;
         await Browser.CoreWebView2.ExecuteScriptAsync(script);
         _credentials = null;
-        if (_autoSubmit) { _submitted = true; _submittedAt = DateTimeOffset.UtcNow; }
+        if (_autoSubmit) _submitted = true;
     }
 
     private static bool IsTrustedRobloxUri(string value) =>
@@ -309,20 +308,6 @@ public partial class WebLoginWindow : Window
         }
 
         NeedsManual = true;
-        if (MailCodes.Available && _submittedAt is { } since)
-        {
-            StatusText.Text = "Checking your inboxes for the email code… You can also type it here.";
-            var mailed = await MailCodes.WaitForCodeAsync(since.AddSeconds(-30));
-            if (_captured || !IsLoaded) return;
-            if (mailed is not null)
-            {
-                StatusText.Text = "Entering the email code…";
-                await FillCodeAsync(mailed);
-                return;
-            }
-            StatusText.Text = "No code arrived. Enter it here to finish signing in.";
-            return;
-        }
         StatusText.Text = _totpSecret is null
             ? "Complete the verification in this window. The account will be saved when sign-in finishes."
             : "Couldn't complete 2-step automatically — finish it in this window.";
@@ -334,11 +319,7 @@ public partial class WebLoginWindow : Window
         string code;
         try { code = Totp.Generate(secret); }
         catch { return; }
-        await FillCodeAsync(code);
-    }
 
-    private async Task FillCodeAsync(string code)
-    {
         var js = $$"""
             (function (code) {
               const inp = document.querySelector('input[autocomplete=one-time-code],input[type=tel],input[type=number],input[type=text]');

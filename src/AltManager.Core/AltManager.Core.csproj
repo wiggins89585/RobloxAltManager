@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <!-- DPAPI (ProtectedData) is not in the base framework on .NET 8 -->
-    <PackageReference Include="MailKit" Version="4.18.2" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 

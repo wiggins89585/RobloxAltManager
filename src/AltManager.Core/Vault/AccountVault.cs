@@ -27,7 +27,6 @@ public sealed class AccountVault : IDisposable
     private VaultFile _file;
 
     public IReadOnlyList<Account> Accounts => _file.Accounts;
-    public IReadOnlyList<Mail.MailInbox> Inboxes => _file.Inboxes;
 
     private AccountVault(string path, IVaultCipher cipher, VaultFile file)
     {
@@ -203,25 +202,6 @@ public sealed class AccountVault : IDisposable
         finally { CryptographicOperations.ZeroMemory(pt); }
     }
 
-    private static byte[] InboxContext(Mail.MailInbox inbox) => Encoding.UTF8.GetBytes("inbox:" + inbox.Id);
-
-    public string GetInboxPassword(Mail.MailInbox inbox)
-    {
-        var pt = _cipher.Decrypt(Convert.FromBase64String(inbox.EncryptedPassword), InboxContext(inbox));
-        try { return Encoding.UTF8.GetString(pt); }
-        finally { CryptographicOperations.ZeroMemory(pt); }
-    }
-
-    public void AddInbox(Mail.MailInbox inbox, string password)
-    {
-        var pt = Encoding.UTF8.GetBytes(password);
-        try { inbox.EncryptedPassword = Convert.ToBase64String(_cipher.Encrypt(pt, InboxContext(inbox))); }
-        finally { CryptographicOperations.ZeroMemory(pt); }
-        _file.Inboxes.Add(inbox);
-    }
-
-    public void RemoveInbox(Mail.MailInbox inbox) => _file.Inboxes.Remove(inbox);
-
     private sealed class VaultFile
     {
         public int Version { get; set; } = 1;
@@ -229,6 +209,5 @@ public sealed class AccountVault : IDisposable
         public string? Salt { get; set; }
         public string Check { get; set; } = "";
         public List<Account> Accounts { get; set; } = new();
-        public List<Mail.MailInbox> Inboxes { get; set; } = new();
     }
 }
