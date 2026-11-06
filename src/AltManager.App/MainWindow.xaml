@@ -6,6 +6,8 @@
         Title="Roblox Alt Manager" Width="1080" Height="560" MinWidth="820" MinHeight="420"
         WindowStyle="None"
         Icon="pack://application:,,,/Assets/RobloxAltManager.ico"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
         Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"

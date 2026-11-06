@@ -28,6 +28,13 @@
         <SolidColorBrush x:Key="TitleBar" Color="#1E1F22"/>
         <SolidColorBrush x:Key="TitleBarText" Color="#DBDEE1"/>
 
+        <!-- Snap every window's layout to whole device pixels so translucent "glass" surfaces don't
+             leave sub-pixel seams that show the acrylic backdrop through as thin white lines. -->
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
         <!-- ===== ToggleButton: flat, rounded; accent when checked ===== -->
         <Style TargetType="ToggleButton">
             <Setter Property="Background" Value="{DynamicResource Raised}"/>
