@@ -42,6 +42,9 @@
             <CheckBox x:Name="ReloginExpired" Content="After checking, offer to re-login expired accounts"
                       ToolTip="Opens a login window for each expired account that has a saved password; you solve any puzzle shown"
                       Margin="0,4,0,0" Foreground="{DynamicResource Fg}"/>
+            <CheckBox x:Name="OptimizeClient" Content="Launch clients at high priority (max CPU / GPU)"
+                      ToolTip="Raises each launched Roblox client's CPU priority and runs it on the high-performance GPU"
+                      Margin="0,4,0,0" Foreground="{DynamicResource Fg}"/>
 
             <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 

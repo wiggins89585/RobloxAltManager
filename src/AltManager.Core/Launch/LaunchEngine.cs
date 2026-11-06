@@ -17,6 +17,8 @@ public sealed class LaunchOptions
     public TimeSpan ProcessDetectTimeout { get; init; } = TimeSpan.FromSeconds(45);
     /// <summary>Skip accounts that already have a tracked client running.</summary>
     public bool SkipAlreadyRunning { get; init; } = true;
+    /// <summary>Raise the launched client's CPU priority and prefer the high-performance GPU.</summary>
+    public bool OptimizeClient { get; init; }
 }
 
 /// <summary>
@@ -90,6 +92,8 @@ public sealed class LaunchEngine
                     "Client process did not appear (is Roblox installed / was the launcher updating?)."));
                 return null;
             }
+
+            if (options.OptimizeClient) ClientOptimizer.Apply(tp.Pid);
 
             progress?.Report(new(account, LaunchStage.Running, Pid: tp.Pid));
             return tp;

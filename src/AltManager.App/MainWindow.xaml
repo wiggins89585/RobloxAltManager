@@ -160,47 +160,49 @@
         <!-- ================= Actions toolbar (account actions left · app tools right) ================= -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource Bg}" Padding="8,2,8,6"
                 BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
-            <DockPanel LastChildFill="False">
-                <!-- Account actions -->
-                <Button DockPanel.Dock="Left" Content="＋ Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
-                        ToolTip="Import .ROBLOSECURITY cookies"/>
-                <Button DockPanel.Dock="Left" Content="🌐 Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
-                        ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                <Button DockPanel.Dock="Left" Content="＋ Create" Style="{StaticResource ToolbarButton}" Command="{Binding CreateAccountCommand}"
-                        ToolTip="Create a new Roblox account in a browser window"/>
-                <Button DockPanel.Dock="Left" Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
-                        ToolTip="Log in several accounts from a user:pass,user:pass list"/>
-                <Button DockPanel.Dock="Left" Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
-                        ToolTip="Re-check every account's cookie"/>
-                <Button DockPanel.Dock="Left" Content="↻ Re-login" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
-                        ToolTip="Re-login expired accounts that have a saved password"/>
-                <Button DockPanel.Dock="Left" Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
-                        ToolTip="Remove the selected accounts"/>
-                <Button DockPanel.Dock="Left" Content="Move banned" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
-                        ToolTip="Move permanently banned accounts to the Banned group"/>
-                <Button DockPanel.Dock="Left" Content="Remove banned" Style="{StaticResource ToolbarButton}" Command="{Binding RemovePermBannedCommand}"
-                        ToolTip="Remove permanently banned accounts (temporary bans are kept)"/>
-
-                <!-- App tools (docked right; declared right-to-left so Settings sits at the far right) -->
-                <Button DockPanel.Dock="Right" Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
-                        Margin="0" ToolTip="Open settings"/>
-                <Button DockPanel.Dock="Right" Content="Lock" Command="{Binding LockCommand}" Style="{StaticResource ToolbarButton}"
-                        ToolTip="Lock the app (Ctrl+L)"/>
-                <Button DockPanel.Dock="Right" Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
-                        ToolTip="Mask or show usernames and IDs"/>
-                <Button DockPanel.Dock="Right" Content="Schedules" Command="{Binding OpenSchedulesCommand}" Style="{StaticResource ToolbarButton}"
-                        ToolTip="Scheduled launches"/>
-                <Button DockPanel.Dock="Right" Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
-                        ToolTip="Activity log / notifications">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Log"/>
-                        <TextBlock Text=" ●" Foreground="#F23F43"
-                                   Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
-                    </StackPanel>
-                </Button>
-                <Button DockPanel.Dock="Right" Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
-                        ToolTip="Games you've launched (click one to reuse it)"/>
-            </DockPanel>
+            <!-- All toolbar buttons in one horizontal strip; scroll with the mouse wheel when the
+                 window is too narrow to show them all. The scrollbar itself is hidden to keep it clean. -->
+            <ScrollViewer x:Name="ToolbarScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                          PreviewMouseWheel="Toolbar_PreviewMouseWheel">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
+                            ToolTip="Import .ROBLOSECURITY cookies"/>
+                    <Button Content="Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
+                            ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
+                    <Button Content="Create" Style="{StaticResource ToolbarButton}" Command="{Binding CreateAccountCommand}"
+                            ToolTip="Create a new Roblox account in a browser window"/>
+                    <Button Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
+                            ToolTip="Log in several accounts from a user:pass,user:pass list"/>
+                    <Button Content="Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
+                            ToolTip="Re-check every account's cookie"/>
+                    <Button Content="Re-login" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
+                            ToolTip="Re-login expired accounts that have a saved password"/>
+                    <Button Content="Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
+                            ToolTip="Remove the selected accounts"/>
+                    <Button Content="Move banned" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
+                            ToolTip="Move permanently banned accounts to the Banned group"/>
+                    <Button Content="Remove banned" Style="{StaticResource ToolbarButton}" Command="{Binding RemovePermBannedCommand}"
+                            ToolTip="Remove permanently banned accounts (temporary bans are kept)"/>
+                    <Button Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Games you've launched (click one to reuse it)"/>
+                    <Button Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Activity log / notifications">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Log"/>
+                            <TextBlock Text=" ●" Foreground="#F23F43"
+                                       Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="Schedules" Command="{Binding OpenSchedulesCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Scheduled launches"/>
+                    <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Mask or show usernames and IDs"/>
+                    <Button Content="Lock" Command="{Binding LockCommand}" Style="{StaticResource ToolbarButton}"
+                            ToolTip="Lock the app (Ctrl+L)"/>
+                    <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
+                            Margin="0" ToolTip="Open settings"/>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- ================= Status bar (counts always; message when busy) ================= -->

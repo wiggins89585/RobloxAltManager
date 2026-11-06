@@ -64,6 +64,7 @@ public sealed class AppSettings
     /// <summary>Relaunch a client back into its game if it closes unexpectedly (not when you close it).</summary>
     public bool AutoRejoin { get; set; }
     public bool AutoReloginExpired { get; set; }   // after validating, offer to re-login expired accounts that have a saved password
+    public bool OptimizeClient { get; set; }        // launch Roblox clients with high CPU priority + high-performance GPU
     /// <summary>Run bulk logins and group joins in simultaneous windows instead of one at a time.</summary>
     public bool ParallelBrowserTasks { get; set; }
 
