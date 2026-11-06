@@ -17,9 +17,6 @@ public static class WindowBackdrop
 
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
-    private const int WM_NCACTIVATE = 0x0086;
-
-    private static readonly HashSet<IntPtr> Hooked = new(), KeepActive = new();
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Margins { public int Left, Right, Top, Bottom; }
@@ -29,9 +26,6 @@ public static class WindowBackdrop
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref Margins margins);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr DefWindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
     /// <summary>Applies (or clears) the backdrop. Safe to call before the handle exists — it just no-ops.</summary>
     public static void Apply(Window window, Kind kind, bool dark = false)
@@ -44,11 +38,6 @@ public static class WindowBackdrop
         var hr = DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
         var enabled = kind != Kind.None && hr == 0;
 
-        // Windows drops Acrylic to a flat colour on inactive windows, so glass windows keep their
-        // frame drawn as active.
-        if (enabled && kind == Kind.Acrylic) KeepActive.Add(hwnd); else KeepActive.Remove(hwnd);
-        if (Hooked.Add(hwnd)) HwndSource.FromHwnd(hwnd)?.AddHook(StayActive);
-
         var darkMode = dark ? 1 : 0;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
 
@@ -57,9 +46,11 @@ public static class WindowBackdrop
         if (HwndSource.FromHwnd(hwnd)?.CompositionTarget is { } ct)
             ct.BackgroundColor = enabled ? Colors.Transparent : Colors.Black;
 
-        // The main window's own panels carry the tint. Other windows need it here, or the frost slider has nothing to change.
-        if (enabled && window == Application.Current?.MainWindow) window.Background = Brushes.Transparent;
-        else if (enabled) window.SetResourceReference(Window.BackgroundProperty, "Bg");
+        // Every glass window gets the translucent frost as its base (not a fully transparent surface).
+        // A transparent base lets the raw, brighter acrylic show through the gaps between cards, which
+        // reads as random white lines while scrolling; the frost base blends those gaps in. The frost
+        // brush itself is driven by the frost slider, so the slider still has something to change.
+        if (enabled) window.SetResourceReference(Window.BackgroundProperty, "Bg");
         else window.SetResourceReference(Window.BackgroundProperty, "BgSolid");
     }
 
@@ -72,12 +63,5 @@ public static class WindowBackdrop
         }
         var all = new Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
         DwmExtendFrameIntoClientArea(hwnd, ref all);
-    }
-
-    private static IntPtr StayActive(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        if (msg != WM_NCACTIVATE || wParam != IntPtr.Zero || !KeepActive.Contains(hwnd)) return IntPtr.Zero;
-        handled = true;
-        return DefWindowProc(hwnd, WM_NCACTIVATE, new IntPtr(1), lParam);
     }
 }
