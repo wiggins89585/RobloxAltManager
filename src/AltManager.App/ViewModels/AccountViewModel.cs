@@ -142,6 +142,21 @@ public partial class AccountViewModel : ObservableObject
     /// <summary>Only true when Roblox confirmed there's no end date.</summary>
     public bool IsPermBanned => Status == AccountStatus.Banned && Model.BanChecked && Model.BanEnds is null;
 
+    // Sort keys for the list's sort modes.
+    /// <summary>Robux for sorting; unknown sorts last (as -1).</summary>
+    public long RobuxValue => Model.Robux ?? -1;
+    public DateTimeOffset AddedAt => Model.Added;
+    /// <summary>Status order: Valid, Unknown, Error, Expired, Banned.</summary>
+    public int StatusRank => Status switch
+    {
+        AccountStatus.Valid => 0,
+        AccountStatus.Unknown => 1,
+        AccountStatus.Error => 2,
+        AccountStatus.Expired => 3,
+        AccountStatus.Banned => 4,
+        _ => 5
+    };
+
     /// <summary>Status text; a temporary ban shows the time left, a permanent one just "Banned".</summary>
     public string StatusLabel
     {

@@ -29,6 +29,7 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        CrashLog.Install(this);
         ShutdownMode = ShutdownMode.OnExplicitShutdown; // don't exit when the password prompt closes
 
         var guard = new MultiInstanceGuard();
@@ -73,6 +74,9 @@ public partial class App : Application
         _ = CheckForUpdatesAsync(settings, e.Args.Contains("--password-vault"), window);
     }
 
+    private static string Truncate(string text, int max) =>
+        text.Length <= max ? text : text[..max].TrimEnd() + "…";
+
     private async Task CheckForUpdatesAsync(AppSettings settings, bool usePasswordVault, Window owner)
     {
 #if DEBUG
@@ -116,8 +120,11 @@ public partial class App : Application
         if (availableUpdate is null || _shutdown.IsCancellationRequested)
             return;
 
+        var notes = availableUpdate.Notes.Length > 0
+            ? $"\n\nWhat's new:\n{Truncate(availableUpdate.Notes, 700)}"
+            : "";
         var confirmation = MessageBox.Show(owner,
-            $"A new update has been detected. Would you like to update to ver {availableUpdate.Version.ToString(3)}?",
+            $"A new update has been detected. Would you like to update to ver {availableUpdate.Version.ToString(3)}?{notes}",
             "Update available", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         if (confirmation != MessageBoxResult.Yes || _shutdown.IsCancellationRequested)
             return;

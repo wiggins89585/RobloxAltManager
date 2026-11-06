@@ -39,6 +39,9 @@
                        Text="Warning: this probably won't work well. Roblox is likely to rate-limit you or show more puzzles, and every account opens its own window."/>
             <CheckBox x:Name="AutoRejoin" Content="Auto-rejoin a client into its game if it closes unexpectedly"
                       Margin="0,8,0,0" Foreground="{DynamicResource Fg}"/>
+            <CheckBox x:Name="ReloginExpired" Content="After checking, offer to re-login expired accounts"
+                      ToolTip="Opens a login window for each expired account that has a saved password; you solve any puzzle shown"
+                      Margin="0,4,0,0" Foreground="{DynamicResource Fg}"/>
 
             <Border Height="1" Background="{DynamicResource Line}" Margin="0,12"/>
 

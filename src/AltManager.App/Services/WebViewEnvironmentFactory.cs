@@ -36,19 +36,47 @@ public static class WebViewEnvironmentFactory
     // Per-account browsing profiles, so each alt's cookies/session stay isolated from the others.
     private static readonly Dictionary<string, Task<CoreWebView2Environment>> _profiles = new();
 
-    /// <summary>A separate persistent profile keyed by account, for "open browser as this account".</summary>
-    public static Task<CoreWebView2Environment> GetForProfileAsync(string key)
+    /// <summary>A separate persistent profile keyed by account, for "open browser as this account".
+    /// An optional <paramref name="proxy"/> routes this profile's traffic through a proxy.</summary>
+    public static Task<CoreWebView2Environment> GetForProfileAsync(string key, string? proxy = null)
     {
         var safe = string.Concat(key.Split(Path.GetInvalidFileNameChars()));
         lock (_profiles)
         {
             if (!_profiles.TryGetValue(safe, out var env))
-                _profiles[safe] = env = CreateAsync(Path.Combine(UserDataFolder, "profiles", safe));
+                _profiles[safe] = env = CreateAsync(Path.Combine(UserDataFolder, "profiles", safe), proxy);
             return env;
         }
     }
 
-    private static Task<CoreWebView2Environment> CreateAsync(string userDataFolder)
+    /// <summary>Parses this app's proxy string (host:port, host:port:user:pass, or scheme://[user:pass@]host:port)
+    /// into a --proxy-server value plus optional credentials. Null when blank/invalid.</summary>
+    public static (string Server, string? User, string? Pass)? ParseProxy(string? proxy)
+    {
+        if (string.IsNullOrWhiteSpace(proxy)) return null;
+        var s = proxy.Trim();
+        var scheme = "";
+        var schemeEnd = s.IndexOf("://", StringComparison.Ordinal);
+        if (schemeEnd >= 0) { scheme = s[..(schemeEnd + 3)]; s = s[(schemeEnd + 3)..]; }
+
+        string? user = null, pass = null;
+        var at = s.LastIndexOf('@');
+        if (at >= 0)
+        {
+            var creds = s[..at];
+            s = s[(at + 1)..];
+            var ci = creds.IndexOf(':');
+            if (ci >= 0) { user = creds[..ci]; pass = creds[(ci + 1)..]; }
+        }
+
+        var parts = s.Split(':');
+        if (parts.Length < 2 || parts[0].Length == 0 || parts[1].Length == 0) return null;
+        var server = $"{parts[0]}:{parts[1]}";
+        if (parts.Length >= 4) { user = parts[2]; pass = parts[3]; } // host:port:user:pass
+        return (scheme + server, user, pass);
+    }
+
+    private static Task<CoreWebView2Environment> CreateAsync(string userDataFolder, string? proxy = null)
     {
         Directory.CreateDirectory(userDataFolder);
 
@@ -62,6 +90,7 @@ public static class WebViewEnvironmentFactory
             "--disable-features=ThirdPartyStoragePartitioning,BlockThirdPartyCookies"
         };
         if (AllowSoftwareWebGL) args.Add("--enable-unsafe-swiftshader");
+        if (ParseProxy(proxy) is { } p) args.Add($"--proxy-server={p.Server}");
 
         var options = new CoreWebView2EnvironmentOptions
         {

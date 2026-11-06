@@ -34,10 +34,12 @@ public interface IDialogService
     void Error(string message);
     /// <summary>Single-line text prompt. Returns the entered text, or null if cancelled.</summary>
     string? Prompt(string title, string label, string initial = "");
+    /// <summary>Asks where to save a file. Returns the chosen path, or null if cancelled.</summary>
+    string? SaveFilePath(string title, string defaultName, string filter);
     /// <summary>Opens the settings window; returns true if the user saved.</summary>
     bool EditSettings(AppSettings settings);
     /// <summary>Opens roblox.com in a browser window signed in as this account (non-modal).</summary>
-    void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId);
+    void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId, string? proxy = null);
     /// <summary>Opens the game-history window (non-modal). onClose reports removed place ids.</summary>
     void OpenGameHistory(IReadOnlyList<GameHistoryEntry> history, RobloxApiClient api, string? cookie,
                          Action<long> onUse, Action<IReadOnlyList<long>> onClose);
@@ -197,8 +199,14 @@ public sealed class DialogService : IDialogService
         return w.ShowDialog() == true;
     }
 
-    public void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId) =>
-        new RobloxBrowserWindow(cookie, profileKey, label, userId).Show(); // non-modal: keep using the app
+    public string? SaveFilePath(string title, string defaultName, string filter)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog { Title = title, FileName = defaultName, Filter = filter, OverwritePrompt = true };
+        return dlg.ShowDialog(Owner) == true ? dlg.FileName : null;
+    }
+
+    public void OpenRobloxBrowser(string cookie, string profileKey, string label, long userId, string? proxy = null) =>
+        new RobloxBrowserWindow(cookie, profileKey, label, userId, proxy).Show(); // non-modal: keep using the app
 
     public void OpenGameHistory(IReadOnlyList<GameHistoryEntry> history, RobloxApiClient api, string? cookie,
                                 Action<long> onUse, Action<IReadOnlyList<long>> onClose)

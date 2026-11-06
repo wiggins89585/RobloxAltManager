@@ -63,6 +63,7 @@ public sealed class AppSettings
     public int AutoValidateIntervalMinutes { get; set; }   // 0 = off
     /// <summary>Relaunch a client back into its game if it closes unexpectedly (not when you close it).</summary>
     public bool AutoRejoin { get; set; }
+    public bool AutoReloginExpired { get; set; }   // after validating, offer to re-login expired accounts that have a saved password
     /// <summary>Run bulk logins and group joins in simultaneous windows instead of one at a time.</summary>
     public bool ParallelBrowserTasks { get; set; }
 
@@ -80,6 +81,7 @@ public sealed class AppSettings
     public int CardColumns { get; set; }
     public int CardWidth { get; set; } = 165;
     public bool ManualOrder { get; set; }   // list sorted by drag order instead of favourite/group/name
+    public string SortMode { get; set; } = "Default";   // Default | Name | Robux (high) | Robux (low) | Newest | Oldest | Status
     public string LastGroup { get; set; } = "";
     public double WindowWidth { get; set; }
     public double WindowHeight { get; set; }

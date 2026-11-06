@@ -18,6 +18,7 @@ public partial class RobloxBrowserWindow : Window
     private const string Home = "https://www.roblox.com/home";
     private string? _cookie;
     private readonly string _profileKey;
+    private readonly (string Server, string? User, string? Pass)? _proxy;
     private readonly List<Tab> _tabs = new();
     private CoreWebView2Environment? _env;
     private Tab? _active;
@@ -27,10 +28,11 @@ public partial class RobloxBrowserWindow : Window
 
     private WebView2? Browser => _active?.View;
 
-    public RobloxBrowserWindow(string cookie, string profileKey, string label, long userId)
+    public RobloxBrowserWindow(string cookie, string profileKey, string label, long userId, string? proxy = null)
     {
         _cookie = cookie;
         _profileKey = profileKey;
+        _proxy = WebViewEnvironmentFactory.ParseProxy(proxy);
         InitializeComponent();
         Title = $"Roblox — {label} (ID: {userId})";
         StatusText.Text = $"Signed in as {label} · ID {userId}";
@@ -47,7 +49,7 @@ public partial class RobloxBrowserWindow : Window
     {
         try
         {
-            _env = await WebViewEnvironmentFactory.GetForProfileAsync(_profileKey);
+            _env = await WebViewEnvironmentFactory.GetForProfileAsync(_profileKey, _proxy is { } p ? $"{p.Server}" : null);
             await AddTabAsync(Home, injectCookie: true);
         }
         catch (WebView2RuntimeNotFoundException)
@@ -79,6 +81,14 @@ public partial class RobloxBrowserWindow : Window
         var core = view.CoreWebView2;
         core.Settings.AreDevToolsEnabled = false;
         core.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.None;
+
+        // Supply proxy credentials for an authenticated proxy (host:port:user:pass).
+        if (_proxy is { User: { } pu, Pass: { } pp })
+            core.BasicAuthenticationRequested += (_, e) =>
+            {
+                e.Response.UserName = pu;
+                e.Response.Password = pp;
+            };
         core.NavigationStarting += (_, e) =>
         {
             if (!IsTrustedRobloxUri(e.Uri))

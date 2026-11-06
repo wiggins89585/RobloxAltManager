@@ -34,6 +34,24 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     public ObservableCollection<string> Presets { get; } = new();
     /// <summary>Status-column filter: "All", "Valid", "Expired", "Banned", "Unchecked".</summary>
     public string[] StatusFilters { get; } = { "All", "Valid", "Expired", "Banned", "Unchecked" };
+    /// <summary>Sort options shown in the list toolbar.</summary>
+    public string[] SortModes { get; } = { "Default", "Name", "Robux (high)", "Robux (low)", "Newest", "Oldest", "Status" };
+
+    /// <summary>One-line account counts for the status bar.</summary>
+    public string HealthSummary
+    {
+        get
+        {
+            var total = Accounts.Count;
+            if (total == 0) return "No accounts yet";
+            var valid = Accounts.Count(a => a.Status == AccountStatus.Valid);
+            var expired = Accounts.Count(a => a.Status == AccountStatus.Expired);
+            var banned = Accounts.Count(a => a.Status == AccountStatus.Banned);
+            var robux = Accounts.Sum(a => a.Model.Robux ?? 0);
+            return $"{total} accounts · {valid} valid · {expired} expired · {banned} banned · {robux:N0} Robux";
+        }
+    }
+    private void NotifyHealth() => OnPropertyChanged(nameof(HealthSummary));
 
     public ObservableCollection<AccountViewModel> Accounts { get; } = new();
     public ObservableCollection<string> Groups { get; } = new();
@@ -87,7 +105,9 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         AccountsView = CollectionViewSource.GetDefaultView(Accounts);
         AccountsView.Filter = o => o is AccountViewModel vm && MatchesFilter(vm);
         _manualOrder = settings.ManualOrder;
+        _sortMode = SortModes.Contains(settings.SortMode) ? settings.SortMode : "Default";
         ApplySort();
+        Accounts.CollectionChanged += (_, _) => NotifyHealth();
         RebuildGroups(); // after AccountsView exists: it may change SelectedGroup → Refresh()
         if (settings.RememberView && Groups.Contains(settings.LastGroup)) SelectedGroup = settings.LastGroup;
 
@@ -428,8 +448,11 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             var result = _dialogs.RunSignup(plan[i], ua);
             if (result is not { } r)
             {
-                // Window closed without finishing: give up on the first, otherwise stop the batch here.
-                if (i == 0) return;
+                // Window closed without finishing. For a single account, just stop. In a batch, let the
+                // user skip this one and carry on, or stop the rest.
+                var remaining = plan.Count - i - 1;
+                if (remaining > 0 && _dialogs.Confirm($"That account wasn't created. Skip it and continue with the remaining {remaining}?"))
+                    continue;
                 break;
             }
 
@@ -604,10 +627,56 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             await LoadAvatarsAsync(Accounts.Select(a => a.UserId));
             foreach (var vm in Accounts) vm.RefreshDisplay(); // update "last checked" times
             _ = RefreshStaleInfoAsync();
+            NotifyHealth();
             StatusMessage = $"{valid} valid, {expired} expired" + (banned > 0 ? $", {banned} banned." : ".");
             Log(banned > 0 || expired > 0 ? ActivityLevel.Warn : ActivityLevel.Info,
                 $"Validated accounts: {valid} valid, {expired} expired, {banned} banned.");
         });
+
+        // Optionally re-login the ones that just expired (opt-in; asks first).
+        if (_settings.AutoReloginExpired &&
+            Accounts.Any(a => a.Status == AccountStatus.Expired && !string.IsNullOrEmpty(_vault.GetPassword(a.Model))))
+            await RefreshExpiredAsync();
+    }
+
+    /// <summary>Re-logs in expired accounts that have a saved password, capturing a fresh cookie.
+    /// Opens a login window per account (the user solves any puzzle); 2-step is answered automatically
+    /// when a TOTP seed is stored.</summary>
+    [RelayCommand]
+    private async Task RefreshExpiredAsync()
+    {
+        var targets = Accounts
+            .Where(a => a.Status == AccountStatus.Expired && !string.IsNullOrEmpty(_vault.GetPassword(a.Model)))
+            .ToList();
+        if (targets.Count == 0)
+        {
+            StatusMessage = "No expired accounts with a saved password to re-login.";
+            return;
+        }
+        if (!_dialogs.Confirm($"Re-login {targets.Count} expired account(s)? A login window opens for each — solve any puzzle it shows."))
+            return;
+
+        var ua = string.IsNullOrWhiteSpace(CustomUserAgent) ? null : CustomUserAgent;
+        int ok = 0;
+        var failed = new List<string>();
+        for (var i = 0; i < targets.Count; i++)
+        {
+            var vm = targets[i];
+            var pass = _vault.GetPassword(vm.Model)!;
+            var r = _dialogs.BulkBrowserLogin(ua, vm.Model.Username, pass, $"{i + 1}/{targets.Count}", _vault.GetTotpSecret(vm.Model));
+            if (r.Cookie is { } cookie)
+            {
+                var (added, why) = await TryAddCookieAsync(cookie, vm.Model.Group, vm.Model.Username, pass);
+                if (added) ok++; else failed.Add($"{vm.Label} ({why})");
+            }
+            else
+                failed.Add($"{vm.Label} ({(r.WrongPassword ? "wrong password" : r.NeedsManual ? "needs verification" : "window closed")})");
+            StatusMessage = $"Re-login: {ok} ok, {failed.Count} failed…";
+        }
+        NotifyHealth();
+        StatusMessage = failed.Count == 0
+            ? $"Re-logged in {ok} account(s)."
+            : $"Re-logged {ok}, failed {failed.Count}: {string.Join("; ", failed)}";
     }
 
     [RelayCommand]
@@ -977,7 +1046,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             !_dialogs.Confirm($"Open {targets.Count} browser windows, one per account?")) return;
         foreach (var t in targets)
         {
-            try { _dialogs.OpenRobloxBrowser(_vault.GetCookie(t.Model), t.Model.Id.ToString(), t.Label, t.UserId); }
+            try { _dialogs.OpenRobloxBrowser(_vault.GetCookie(t.Model), t.Model.Id.ToString(), t.Label, t.UserId, t.Model.Proxy); }
             catch (Exception ex) { _dialogs.Error($"Could not open browser for {t.Label}: " + ex.Message); }
         }
     }
@@ -1053,6 +1122,43 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         await _vault.SaveAsync();
     }
 
+    /// <summary>Writes username:password for the selected accounts (or all, if none are selected) that
+    /// have a saved password, to a file the user picks. Handy as a backup after creating accounts.</summary>
+    [RelayCommand]
+    private async Task ExportLoginsAsync()
+    {
+        var chosen = Accounts.Where(a => a.IsSelected).ToList();
+        if (chosen.Count == 0) chosen = Accounts.ToList();
+
+        var lines = new List<string>();
+        foreach (var a in chosen)
+        {
+            var pw = _vault.GetPassword(a.Model);
+            if (!string.IsNullOrEmpty(pw)) lines.Add($"{a.Model.Username}:{pw}");
+        }
+        if (lines.Count == 0)
+        {
+            _dialogs.Error("None of those accounts have a saved password to export.");
+            return;
+        }
+        if (!_dialogs.Confirm($"Export {lines.Count} login(s) as plain text username:password? Keep the file somewhere safe."))
+            return;
+
+        var path = _dialogs.SaveFilePath("Export logins", $"roblox-logins-{DateTime.Now:yyyy-MM-dd}.txt",
+            "Text file (*.txt)|*.txt|All files (*.*)|*.*");
+        if (path is null) return;
+
+        try
+        {
+            await System.IO.File.WriteAllLinesAsync(path, lines);
+            StatusMessage = $"Exported {lines.Count} login(s).";
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Error($"Couldn't write the file: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private async Task EditTagsAsync(AccountViewModel? vm)
     {
@@ -1120,6 +1226,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     // ---------------- Manual order (drag to reorder) ----------------
 
     [ObservableProperty] private bool _manualOrder;
+    [ObservableProperty] private string _sortMode = "Default";
 
     partial void OnManualOrderChanged(bool value)
     {
@@ -1129,24 +1236,47 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         ApplySort();
         StatusMessage = value
             ? "Manual order on — drag rows to reorder (or right-click → Move up/down)."
-            : "Sorting by favourite, then group, then name.";
+            : $"Sorting by {SortMode.ToLowerInvariant()}.";
     }
 
-    /// <summary>Sets the view's sort: manual drag order, or the default favourite/group/name.</summary>
+    partial void OnSortModeChanged(string value)
+    {
+        _settings.SortMode = value;
+        _settings.Save();
+        if (ManualOrder) { ManualOrder = false; return; } // its handler re-sorts
+        ApplySort();
+    }
+
+    /// <summary>Sets the view's sort: manual drag order, or the chosen sort mode.</summary>
     private void ApplySort()
     {
         using (AccountsView.DeferRefresh())
         {
             AccountsView.SortDescriptions.Clear();
+            void By(string prop, ListSortDirection dir) =>
+                AccountsView.SortDescriptions.Add(new SortDescription(prop, dir));
+
             if (ManualOrder)
             {
-                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Order), ListSortDirection.Ascending));
+                By(nameof(AccountViewModel.Order), ListSortDirection.Ascending);
+                return;
             }
-            else
+            switch (SortMode)
             {
-                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Favorite), ListSortDirection.Descending));
-                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Group), ListSortDirection.Ascending));
-                AccountsView.SortDescriptions.Add(new SortDescription(nameof(AccountViewModel.Label), ListSortDirection.Ascending));
+                case "Name": By(nameof(AccountViewModel.Label), ListSortDirection.Ascending); break;
+                case "Robux (high)": By(nameof(AccountViewModel.RobuxValue), ListSortDirection.Descending); break;
+                case "Robux (low)": By(nameof(AccountViewModel.RobuxValue), ListSortDirection.Ascending); break;
+                case "Newest": By(nameof(AccountViewModel.AddedAt), ListSortDirection.Descending); break;
+                case "Oldest": By(nameof(AccountViewModel.AddedAt), ListSortDirection.Ascending); break;
+                case "Status":
+                    By(nameof(AccountViewModel.StatusRank), ListSortDirection.Ascending);
+                    By(nameof(AccountViewModel.Label), ListSortDirection.Ascending);
+                    break;
+                default: // Default: favourite, then group, then name
+                    By(nameof(AccountViewModel.Favorite), ListSortDirection.Descending);
+                    By(nameof(AccountViewModel.Group), ListSortDirection.Ascending);
+                    By(nameof(AccountViewModel.Label), ListSortDirection.Ascending);
+                    break;
             }
         }
     }

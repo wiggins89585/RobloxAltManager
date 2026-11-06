@@ -240,6 +240,14 @@ public partial class SignupWindow : Window
 
               const hasPass = !!document.querySelector('input[type=password]');
 
+              // ----- Email/phone verification step: the user must finish it by hand. -----
+              if (!user && !hasPass) {
+                const vtxt = (document.body ? document.body.innerText : '').toLowerCase();
+                const hasCode = !!document.querySelector('input[type=tel],input[type=number],input[autocomplete=one-time-code],input[inputmode=numeric]');
+                if (hasCode && /(verification code|verify it|check your (email|inbox)|enter the code|we sent|security code|phone number|confirm your email)/.test(vtxt))
+                  return 'verify';
+              }
+
               // ----- Roblox returned a generic error on this step: allow a few more submits. -----
               if (pass && pass.value === data.password) {
                 const txt = (document.body ? document.body.innerText : '').toLowerCase();
@@ -300,6 +308,8 @@ public partial class SignupWindow : Window
 
         if (raw == "captcha")
             StatusText.Text = "Solve the puzzle to finish creating the account — it saves automatically.";
+        else if (raw == "verify")
+            StatusText.Text = "Roblox wants a verification code — enter it here. The account saves once you're signed in.";
         else if (raw == "submitted")
             StatusText.Text = "Submitting sign-up… (solve the puzzle if it appears)";
         else if (raw is "filling-user" or "filling-pass")

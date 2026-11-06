@@ -50,7 +50,7 @@ public sealed class GitHubUpdateService
         if (expectedDigest.Length != 32)
             throw new InvalidDataException("GitHub release has an invalid SHA-256 digest.");
 
-        return new AvailableUpdate(releaseVersion, assetName, downloadUri, digest);
+        return new AvailableUpdate(releaseVersion, assetName, downloadUri, digest, release.Body?.Trim() ?? "");
     }
 
     public async Task<PreparedUpdate> DownloadAsync(AvailableUpdate update, CancellationToken cancellationToken)
@@ -244,6 +244,9 @@ public sealed class GitHubUpdateService
 
         [JsonPropertyName("assets")]
         public List<GitHubAsset> Assets { get; set; } = new();
+
+        [JsonPropertyName("body")]
+        public string? Body { get; set; }
     }
 
     private sealed class GitHubAsset
@@ -260,4 +263,4 @@ public sealed class GitHubUpdateService
 }
 
 public sealed record PreparedUpdate(Version Version, string UpdateDirectory, string StagingDirectory);
-public sealed record AvailableUpdate(Version Version, string AssetName, Uri DownloadUri, string Digest);
+public sealed record AvailableUpdate(Version Version, string AssetName, Uri DownloadUri, string Digest, string Notes = "");

@@ -55,6 +55,10 @@
                 <Separator/>
                 <MenuItem Header="2FA code" CommandParameter="{Binding}" IsEnabled="{Binding HasTotp}"
                           Command="{Binding PlacementTarget.Tag.CopyTotpCodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <Separator/>
+                <MenuItem Header="💾  Export logins to file…"
+                          ToolTip="Save username:password for the checked accounts (or all) that have a saved password"
+                          Command="{Binding PlacementTarget.Tag.ExportLoginsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             </MenuItem>
 
             <MenuItem Header="Edit">
@@ -166,6 +170,8 @@
                         ToolTip="Log in several accounts from a user:pass,user:pass list"/>
                 <Button DockPanel.Dock="Left" Content="✔ Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
                         ToolTip="Re-check every account's cookie"/>
+                <Button DockPanel.Dock="Left" Content="↻ Re-login" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
+                        ToolTip="Re-login expired accounts that have a saved password"/>
                 <Button DockPanel.Dock="Left" Content="🗑 Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
                         ToolTip="Remove the selected accounts"/>
                 <Button DockPanel.Dock="Left" Content="Move banned" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
@@ -195,13 +201,16 @@
             </DockPanel>
         </Border>
 
-        <!-- ================= Status bar (hidden when idle) ================= -->
+        <!-- ================= Status bar (counts always; message when busy) ================= -->
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg}" Padding="10,3"
-                Visibility="{Binding HasStatus, Converter={StaticResource BoolVis}}">
+                BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0">
             <DockPanel>
-                <ProgressBar DockPanel.Dock="Right" Width="100" Height="6" IsIndeterminate="True"
+                <ProgressBar DockPanel.Dock="Right" Width="100" Height="6" IsIndeterminate="True" Margin="8,0,0,0"
                              Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="{DynamicResource Muted}"/>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding HealthSummary}" FontSize="11"
+                           Foreground="{DynamicResource Muted}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="{DynamicResource Muted}"
+                           TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
 
@@ -243,6 +252,10 @@
                                   IsChecked="{Binding ManualOrder, Mode=OneWay}"
                                   Command="{Binding ToggleManualOrderCommand}"
                                   ToolTip="Manual order — drag rows (or right-click → Move up/down) to arrange them yourself"/>
+                    <ComboBox DockPanel.Dock="Right" Width="110" Margin="4,0,0,0" VerticalAlignment="Center"
+                              ItemsSource="{Binding SortModes}" SelectedItem="{Binding SortMode}"
+                              IsEnabled="{Binding ManualOrder, Converter={StaticResource NotBool}}"
+                              ToolTip="Sort the accounts list"/>
 
                     <!-- Columns (grid view only) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0,0,0"
