@@ -1490,7 +1490,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         try
         {
             await _engine.LaunchBatchAsync(accounts.Select(a => a.Model).ToList(), target,
-                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient }, progress, _launchCts.Token);
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap }, progress, _launchCts.Token);
         }
         finally
         {
@@ -1704,7 +1704,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         try
         {
             await _engine.LaunchBatchAsync(accounts.Select(a => a.Model).ToList(), a => targets[a.Id],
-                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient },
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap },
                 progress, _launchCts.Token);
         }
         catch { /* logged via progress; API already acknowledged */ }
@@ -1837,7 +1837,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         {
             await _engine.LaunchBatchAsync(
                 accounts.Select(a => a.Model).ToList(), a => targets[a.Id],
-                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient },
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap },
                 progress, _launchCts.Token);
             StatusMessage = "Batch finished.";
         }
@@ -1954,7 +1954,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             var v = Accounts.FirstOrDefault(a => a.Model.Id == pr.Account.Id);
             if (v is not null) v.LaunchState = pr.Stage.ToString();
         });
-        try { await _engine.LaunchAsync(vm.Model, target, new LaunchOptions { OptimizeClient = _settings.OptimizeClient }, progress); } catch { /* best effort */ }
+        try { await _engine.LaunchAsync(vm.Model, target, new LaunchOptions { OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap }, progress); } catch { /* best effort */ }
     }
 
     // ---------------- Helpers ----------------

@@ -17,8 +17,11 @@ public sealed class LaunchOptions
     public TimeSpan ProcessDetectTimeout { get; init; } = TimeSpan.FromSeconds(45);
     /// <summary>Skip accounts that already have a tracked client running.</summary>
     public bool SkipAlreadyRunning { get; init; } = true;
-    /// <summary>Raise the launched client's CPU priority and prefer the high-performance GPU.</summary>
+    /// <summary>Low-resource mode: cap FPS + lowest graphics, below-normal priority and EcoQoS, so
+    /// many clients can run at once.</summary>
     public bool OptimizeClient { get; init; }
+    /// <summary>FPS cap used in low-resource mode; 0 = uncapped.</summary>
+    public int FpsCap { get; init; } = 20;
 }
 
 /// <summary>
@@ -47,6 +50,10 @@ public sealed class LaunchEngine
         IProgress<LaunchProgress>? progress = null, CancellationToken ct = default)
     {
         options ??= new LaunchOptions();
+
+        // Sync the FPS-cap / low-graphics FFlags to the current setting before the client starts
+        // (Roblox reads them at launch). Clears them again when low-resource mode is off.
+        ClientOptimizer.SyncFFlags(options.OptimizeClient, options.FpsCap);
 
         if (!_guard.IsActive && _tracker.Active.Count > 0)
             progress?.Report(new(account, LaunchStage.Starting,

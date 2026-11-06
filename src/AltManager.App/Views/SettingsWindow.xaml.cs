@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
         AutoRejoin.IsChecked = _s.AutoRejoin;
         ReloginExpired.IsChecked = _s.AutoReloginExpired;
         OptimizeClient.IsChecked = _s.OptimizeClient;
+        FpsCap.Text = _s.OptimizeFpsCap.ToString();
         ParallelBrowser.IsChecked = _s.ParallelBrowserTasks;
         Streamer.IsChecked = _s.StreamerMode;
         ConfirmCopy.IsChecked = _s.ConfirmBeforeCopyPassword;
@@ -150,6 +151,7 @@ public partial class SettingsWindow : Window
         _s.AutoRejoin = AutoRejoin.IsChecked == true;
         _s.AutoReloginExpired = ReloginExpired.IsChecked == true;
         _s.OptimizeClient = OptimizeClient.IsChecked == true;
+        _s.OptimizeFpsCap = ParseClamp(FpsCap.Text, _s.OptimizeFpsCap, 0, 240);
         _s.ParallelBrowserTasks = ParallelBrowser.IsChecked == true;
         _s.StreamerMode = Streamer.IsChecked == true;
         _s.ConfirmBeforeCopyPassword = ConfirmCopy.IsChecked == true;
@@ -167,6 +169,9 @@ public partial class SettingsWindow : Window
             : Services.Theme.DefaultAccent;
         _s.GlassFrost = (int)FrostSlider.Value;
         _s.Save();
+        // Apply the low-resource FFlags immediately so turning the mode off un-caps normal play now,
+        // not only on the next launch from the manager.
+        AltManager.Core.Launch.ClientOptimizer.SyncFFlags(_s.OptimizeClient, _s.OptimizeFpsCap);
         DialogResult = true;
     }
 
