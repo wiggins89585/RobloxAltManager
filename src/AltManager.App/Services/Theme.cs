@@ -85,10 +85,10 @@ public static class Theme
         // Glass themes: every surface is translucent so the acrylic blur shows through the whole UI.
         if (IsGlass(t.Name))
         {
-            // Frost strength scales every surface's alpha. The floor keeps text readable over
-            // anything behind the window, even with the slider at clear.
+            // Frost strength scales every surface's alpha. At the low end the glass is nearly clear
+            // (see-through to the blurred backdrop); the slider raises it toward a heavy frost.
             var f = Math.Clamp(GlassFrost, 0, 100) / 100.0;
-            byte top = (byte)(0x70 + f * (0xE6 - 0x70));            // panel top alpha: ~44% … ~90%
+            byte top = (byte)(0x14 + f * (0xCC - 0x14));            // panel top alpha: ~8% … ~80%
             var dark = IsDarkGlass(t.Name);
             var roblox = t.Name == "Roblox Glass";
             Color Tint(byte a) => !dark ? White(a) : roblox ? Color.FromArgb(a, 0x23, 0x25, 0x27) : Color.FromArgb(a, 0x20, 0x24, 0x2C);
