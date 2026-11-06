@@ -40,6 +40,7 @@ public partial class SettingsWindow : Window
         RememberView.IsChecked = _s.RememberView;
         CardWidth.Text = _s.CardWidth.ToString();
         UserAgent.Text = _s.CustomUserAgent;
+        WebView2Folder.Text = _s.WebView2Folder;
         ApiEnabled.IsChecked = _s.LocalApiEnabled;
         ApiPort.Text = _s.LocalApiPort.ToString();
         ApiToken.Text = string.IsNullOrWhiteSpace(_s.LocalApiToken)
@@ -160,6 +161,8 @@ public partial class SettingsWindow : Window
         _s.RememberView = RememberView.IsChecked == true;
         _s.CardWidth = ParseClamp(CardWidth.Text, 165, 120, 320);
         _s.CustomUserAgent = UserAgent.Text.Trim();
+        _s.WebView2Folder = WebView2Folder.Text.Trim();
+        Services.WebViewEnvironmentFactory.BrowserExecutableFolder = _s.WebView2Folder; // applies to new browser windows
         _s.LocalApiEnabled = ApiEnabled.IsChecked == true;
         _s.LocalApiPort = ParseClamp(ApiPort.Text, 7963, 1024, 65535);
         _s.LocalApiToken = ApiToken.Text.Trim();
@@ -173,6 +176,24 @@ public partial class SettingsWindow : Window
         // not only on the next launch from the manager.
         AltManager.Core.Launch.ClientOptimizer.SyncFFlags(_s.OptimizeClient, _s.OptimizeFpsCap);
         DialogResult = true;
+    }
+
+    private void BrowseWebView2_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFolderDialog { Title = "Select the WebView2 runtime folder" };
+        if (!string.IsNullOrWhiteSpace(WebView2Folder.Text) && Directory.Exists(WebView2Folder.Text))
+            dlg.InitialDirectory = WebView2Folder.Text;
+        if (dlg.ShowDialog(this) == true) WebView2Folder.Text = dlg.FolderName;
+    }
+
+    private void GetWebView2_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                Services.WebViewEnvironmentFactory.RuntimeDownloadUrl) { UseShellExecute = true });
+        }
+        catch { MessageBox.Show(this, "Couldn't open the browser. Go to: " + Services.WebViewEnvironmentFactory.RuntimeDownloadUrl, "WebView2 Runtime"); }
     }
 
     private static void SetLaunchOnWindowsStartup(bool enabled)

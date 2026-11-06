@@ -91,6 +91,7 @@ public sealed class AppSettings
 
     // Browser
     public string CustomUserAgent { get; set; } = "";
+    public string WebView2Folder { get; set; } = "";   // optional WebView2 runtime folder (blank = installed runtime)
 
     // Theme
     public string Theme { get; set; } = "Dark";

@@ -31,6 +31,38 @@ public static class WebViewEnvironmentFactory
     /// <summary>Set before the first login if the user is on RDP / a VM without GPU passthrough.</summary>
     public static bool AllowSoftwareWebGL { get; set; } = true;
 
+    /// <summary>Optional folder of a WebView2 runtime (a fixed-version runtime or a Chromium-based Edge),
+    /// for machines where the evergreen runtime isn't installed. Blank = use the installed runtime.</summary>
+    public static string? BrowserExecutableFolder { get; set; }
+
+    /// <summary>Where to get the free WebView2 runtime (it's separate from the Edge browser).</summary>
+    public const string RuntimeDownloadUrl = "https://developer.microsoft.com/microsoft-edge/webview2/";
+
+    private static string? Folder => string.IsNullOrWhiteSpace(BrowserExecutableFolder) ? null : BrowserExecutableFolder;
+
+    /// <summary>True when a usable WebView2 runtime is present (installed, or the custom folder).</summary>
+    public static bool RuntimeAvailable()
+    {
+        try { return !string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString(Folder)); }
+        catch { return false; }
+    }
+
+    /// <summary>Explains that the WebView2 runtime is missing and offers to open the download page.</summary>
+    public static void PromptInstallRuntime(System.Windows.Window? owner)
+    {
+        var answer = System.Windows.MessageBox.Show(owner,
+            "The in-app browser (for Login / Create / opening an account) needs the Microsoft Edge " +
+            "WebView2 Runtime. That's a free Microsoft component, separate from the Edge browser — removing " +
+            "Edge often removes it too. It works alongside any browser you use (Zen, Chrome, etc.).\n\n" +
+            "Open the download page now? Install it, then reopen this window.\n\n" +
+            "Advanced: if you already have a WebView2 / Chromium-Edge runtime in a custom location, set its " +
+            "folder under Settings → Browser.",
+            "WebView2 runtime needed", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Information);
+        if (answer == System.Windows.MessageBoxResult.Yes)
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(RuntimeDownloadUrl) { UseShellExecute = true }); }
+            catch { /* no shell handler */ }
+    }
+
     public static Task<CoreWebView2Environment> GetAsync() => _env ??= CreateAsync(UserDataFolder);
 
     // Per-account browsing profiles, so each alt's cookies/session stay isolated from the others.
@@ -99,6 +131,6 @@ public static class WebViewEnvironmentFactory
         };
 
         // All windows must use identical options for the same user-data folder.
-        return CoreWebView2Environment.CreateAsync(browserExecutableFolder: null, userDataFolder, options);
+        return CoreWebView2Environment.CreateAsync(Folder, userDataFolder, options);
     }
 }

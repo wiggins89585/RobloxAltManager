@@ -54,7 +54,7 @@ public partial class RobloxBrowserWindow : Window
         }
         catch (WebView2RuntimeNotFoundException)
         {
-            MessageBox.Show(this, "The Microsoft Edge WebView2 Runtime is not installed.", "WebView2 missing");
+            WebViewEnvironmentFactory.PromptInstallRuntime(this);
             Close();
         }
     }

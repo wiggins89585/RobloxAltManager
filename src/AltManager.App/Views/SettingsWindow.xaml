@@ -139,6 +139,17 @@
             <TextBlock Text="BROWSER" Style="{StaticResource Heading}"/>
             <TextBlock Text="Custom User-Agent (blank = engine default; recommended)" Style="{StaticResource Label}" TextWrapping="Wrap"/>
             <TextBox x:Name="UserAgent" TextWrapping="Wrap"/>
+
+            <TextBlock Text="WebView2 runtime folder (blank = use the installed runtime)" Style="{StaticResource Label}"
+                       TextWrapping="Wrap" Margin="0,10,0,2"/>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Browse…" Padding="10,2" Margin="6,0,0,0" Click="BrowseWebView2_Click"/>
+                <TextBox x:Name="WebView2Folder"/>
+            </DockPanel>
+            <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{DynamicResource Muted}"
+                       Text="The in-app Login / Create / browser windows need Microsoft's WebView2 Runtime — a free component, separate from the Edge browser (removing Edge can remove it). It works with any browser you use. Firefox-based browsers (Zen) can't replace it."/>
+            <Button Content="Get WebView2 Runtime" HorizontalAlignment="Left" Margin="0,6,0,0" Click="GetWebView2_Click"
+                    ToolTip="Opens Microsoft's free WebView2 Runtime download page"/>
         </StackPanel>
 
         <!-- ============ Buttons ============ -->

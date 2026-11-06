@@ -46,7 +46,7 @@ public partial class GroupJoinWindow : Window
         try { await Browser.EnsureCoreWebView2Async(await WebViewEnvironmentFactory.GetForProfileAsync(_profileKey)); }
         catch (WebView2RuntimeNotFoundException)
         {
-            MessageBox.Show(this, "The Microsoft Edge WebView2 Runtime is not installed.", "WebView2 missing");
+            WebViewEnvironmentFactory.PromptInstallRuntime(this);
             Close();
             return;
         }

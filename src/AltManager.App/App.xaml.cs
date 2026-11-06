@@ -49,6 +49,7 @@ public partial class App : Application
         }
 
         var settings = AppSettings.Load();
+        Services.WebViewEnvironmentFactory.BrowserExecutableFolder = settings.WebView2Folder;
         Services.Theme.WatchWindows();
         Services.Theme.GlassFrost = settings.GlassFrost;
         Services.Theme.ApplyTheme(settings.Theme, settings.AccentColor);
