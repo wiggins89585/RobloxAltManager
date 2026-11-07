@@ -588,9 +588,16 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         await LoadAvatarsAsync(new[] { user.Id });
     }
 
+    private bool _validating;
+    private bool _autoReloginDeclined;
+
     [RelayCommand]
     private async Task ValidateAllAsync()
     {
+        if (_validating) return; // don't stack runs (e.g. the auto-validate timer firing while a prompt is up)
+        _validating = true;
+        try
+        {
         await RunBusy("Validating accounts…", async () =>
         {
             int valid = 0, expired = 0, banned = 0;
@@ -633,29 +640,44 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
                 $"Validated accounts: {valid} valid, {expired} expired, {banned} banned.");
         });
 
-        // Optionally re-login the ones that just expired (opt-in; asks first).
-        if (_settings.AutoReloginExpired &&
-            Accounts.Any(a => a.Status == AccountStatus.Expired && !string.IsNullOrEmpty(_vault.GetPassword(a.Model))))
-            await RefreshExpiredAsync();
+        // Optionally offer to re-login the ones that just expired (opt-in). A "No" is remembered for
+        // the session, so it stops asking again on every auto-validate cycle.
+        var pending = ExpiredWithPassword().Count;
+        if (_settings.AutoReloginExpired && !_autoReloginDeclined && pending > 0)
+        {
+            if (_dialogs.Confirm($"Re-login {pending} expired account(s)? A login window opens for each — solve any puzzle it shows."))
+                await ReloginExpiredCoreAsync();
+            else
+                _autoReloginDeclined = true;
+        }
+        }
+        finally { _validating = false; }
     }
 
     /// <summary>Re-logs in expired accounts that have a saved password, capturing a fresh cookie.
     /// Opens a login window per account (the user solves any puzzle); 2-step is answered automatically
     /// when a TOTP seed is stored.</summary>
+    private List<AccountViewModel> ExpiredWithPassword() =>
+        Accounts.Where(a => a.Status == AccountStatus.Expired && !string.IsNullOrEmpty(_vault.GetPassword(a.Model))).ToList();
+
     [RelayCommand]
     private async Task RefreshExpiredAsync()
     {
-        var targets = Accounts
-            .Where(a => a.Status == AccountStatus.Expired && !string.IsNullOrEmpty(_vault.GetPassword(a.Model)))
-            .ToList();
-        if (targets.Count == 0)
+        var pending = ExpiredWithPassword().Count;
+        if (pending == 0)
         {
             StatusMessage = "No expired accounts with a saved password to re-login.";
             return;
         }
-        if (!_dialogs.Confirm($"Re-login {targets.Count} expired account(s)? A login window opens for each — solve any puzzle it shows."))
+        if (!_dialogs.Confirm($"Re-login {pending} expired account(s)? A login window opens for each — solve any puzzle it shows."))
             return;
+        await ReloginExpiredCoreAsync();
+    }
 
+    /// <summary>Re-logs in every expired account that has a saved password. No prompt — callers confirm.</summary>
+    private async Task ReloginExpiredCoreAsync()
+    {
+        var targets = ExpiredWithPassword();
         var ua = string.IsNullOrWhiteSpace(CustomUserAgent) ? null : CustomUserAgent;
         int ok = 0;
         var failed = new List<string>();
