@@ -38,12 +38,58 @@ public static class WebViewEnvironmentFactory
     /// <summary>Where to get the free WebView2 runtime (it's separate from the Edge browser).</summary>
     public const string RuntimeDownloadUrl = "https://developer.microsoft.com/microsoft-edge/webview2/";
 
-    private static string? Folder => string.IsNullOrWhiteSpace(BrowserExecutableFolder) ? null : BrowserExecutableFolder;
+    /// <summary>
+    /// Works out which runtime folder to hand WebView2:
+    ///  1. the user's custom folder, if set;
+    ///  2. the installed runtime via normal discovery (return null = let WebView2 find it);
+    ///  3. if discovery is broken (common after removing Edge — the files are there but the
+    ///     registration is rejected), the newest runtime version folder found on disk.
+    /// </summary>
+    private static string? ResolveFolder()
+    {
+        // Use the custom folder only if it actually hosts a runtime (a wrong level, e.g. the parent
+        // of the version folder, silently falls through instead of breaking the browser).
+        if (!string.IsNullOrWhiteSpace(BrowserExecutableFolder) && Hosts(BrowserExecutableFolder))
+            return BrowserExecutableFolder;
+        if (Hosts(null)) return null; // normal discovery works
+        return FindInstalledRuntime();
 
-    /// <summary>True when a usable WebView2 runtime is present (installed, or the custom folder).</summary>
+        static bool Hosts(string? folder)
+        {
+            try { return !string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString(folder)); }
+            catch { return false; }
+        }
+    }
+
+    /// <summary>Finds the newest installed WebView2 runtime version folder on disk, or null.</summary>
+    private static string? FindInstalledRuntime()
+    {
+        foreach (var programs in new[]
+                 {
+                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft"),
+                 })
+        {
+            var root = Path.Combine(programs, "Microsoft", "EdgeWebView", "Application");
+            if (programs.EndsWith("Microsoft")) root = Path.Combine(programs, "EdgeWebView", "Application");
+            if (!Directory.Exists(root)) continue;
+            var best = Directory.GetDirectories(root)
+                .Where(d => File.Exists(Path.Combine(d, "msedgewebview2.exe")))
+                .Select(d => (dir: d, ver: Version.TryParse(Path.GetFileName(d), out var v) ? v : null))
+                .Where(x => x.ver is not null)
+                .OrderByDescending(x => x.ver)
+                .Select(x => x.dir)
+                .FirstOrDefault();
+            if (best is not null) return best;
+        }
+        return null;
+    }
+
+    /// <summary>True when a usable WebView2 runtime is present (installed, found on disk, or the custom folder).</summary>
     public static bool RuntimeAvailable()
     {
-        try { return !string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString(Folder)); }
+        try { return !string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString(ResolveFolder())); }
         catch { return false; }
     }
 
@@ -63,7 +109,10 @@ public static class WebViewEnvironmentFactory
             catch { /* no shell handler */ }
     }
 
-    public static Task<CoreWebView2Environment> GetAsync() => _env ??= CreateAsync(UserDataFolder);
+    // A faulted environment is not cached, so once the runtime is reachable (e.g. after the user sets a
+    // folder or installs it) the next attempt succeeds without restarting the app.
+    public static Task<CoreWebView2Environment> GetAsync() =>
+        _env is { IsFaulted: false, IsCanceled: false } ? _env : _env = CreateAsync(UserDataFolder);
 
     // Per-account browsing profiles, so each alt's cookies/session stay isolated from the others.
     private static readonly Dictionary<string, Task<CoreWebView2Environment>> _profiles = new();
@@ -75,7 +124,8 @@ public static class WebViewEnvironmentFactory
         var safe = string.Concat(key.Split(Path.GetInvalidFileNameChars()));
         lock (_profiles)
         {
-            if (!_profiles.TryGetValue(safe, out var env))
+            // Don't reuse a faulted environment, so a retry re-creates it.
+            if (!_profiles.TryGetValue(safe, out var env) || env.IsFaulted || env.IsCanceled)
                 _profiles[safe] = env = CreateAsync(Path.Combine(UserDataFolder, "profiles", safe), proxy);
             return env;
         }
@@ -131,6 +181,6 @@ public static class WebViewEnvironmentFactory
         };
 
         // All windows must use identical options for the same user-data folder.
-        return CoreWebView2Environment.CreateAsync(Folder, userDataFolder, options);
+        return CoreWebView2Environment.CreateAsync(ResolveFolder(), userDataFolder, options);
     }
 }
