@@ -115,6 +115,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         ConfigureAutoValidate();
 
         _api.CookieRotated += OnCookieRotated;
+        _vault.AccountsMerged += OnAccountsMerged;
         _tracker.ProcessStarted += (_, p) => OnUi(() => { ActiveProcesses.Add(p); SetPid(p.AccountId, p.Pid); _ = RestoreWindowBoundsAsync(p); });
         _tracker.ProcessExited += (_, p) => OnUi(() =>
         {
@@ -229,10 +230,25 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     /// </summary>
     private void SafeRefresh()
     {
+        void Refresh()
+        {
+            try
+            {
+                // Finish any in-progress cell edit first; Refresh throws while one is open.
+                if (AccountsView is IEditableCollectionView edit)
+                {
+                    if (edit.IsAddingNew) edit.CommitNew();
+                    if (edit.IsEditingItem) edit.CommitEdit();
+                }
+                AccountsView.Refresh();
+            }
+            catch (InvalidOperationException) { /* an edit is still committing; the next change refreshes */ }
+        }
+
         if (AccountsView is IEditableCollectionView { IsEditingItem: true } or IEditableCollectionView { IsAddingNew: true })
-            Application.Current.Dispatcher.BeginInvoke(new Action(() => AccountsView.Refresh()), DispatcherPriority.Background);
+            Application.Current.Dispatcher.BeginInvoke(new Action(Refresh), DispatcherPriority.Background);
         else
-            AccountsView.Refresh();
+            Refresh();
     }
 
     private bool MatchesFilter(AccountViewModel vm)
@@ -859,11 +875,15 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
     private async Task FetchInfoAsync(AccountViewModel t, string cookie)
     {
-        t.Model.Robux = await _api.GetRobuxAsync(cookie) ?? t.Model.Robux; // a failed call keeps the last value
+        var robux = await _api.GetRobuxAsync(cookie);
+        t.Model.Robux = robux ?? t.Model.Robux; // a failed call keeps the last value
         t.Model.Premium = await _api.GetPremiumAsync(t.UserId, cookie) ?? t.Model.Premium;
         t.Model.Created ??= await _api.GetCreatedAsync(t.UserId); // created never changes
-        t.Model.InfoUpdated = DateTimeOffset.UtcNow;
+        // Only mark the info fresh when the balance actually came back; otherwise the background
+        // refresh would skip this account for an hour and leave its Robux blank.
+        if (robux is not null) t.Model.InfoUpdated = DateTimeOffset.UtcNow;
         t.RefreshInfo();
+        NotifyHealth();
     }
 
     [RelayCommand]
@@ -994,7 +1014,9 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         var recipients = vm is not null ? TargetsFor(vm) : Accounts.Where(a => a.IsSelected).ToList();
         if (recipients.Count == 0) { StatusMessage = "Select the accounts to pay first."; return; }
         _dialogs.OpenGroupPayout(Accounts.ToList(), recipients, _api,
-            a => { try { return _vault.GetCookie(a.Model); } catch { return null; } });
+            a => { try { return _vault.GetCookie(a.Model); } catch { return null; } },
+            a => { try { return _vault.GetTotpSecret(a.Model); } catch { return null; } });
+        _ = RefreshStaleInfoAsync(); // balances changed
     }
 
     [RelayCommand]
@@ -1997,6 +2019,25 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         vm.Pid = pid;
         vm.LaunchState = pid is null ? "Exited" : "Running";
     }
+
+    /// <summary>A save found accounts on disk that this window didn't have (another copy of the app, or
+    /// an import, wrote them). They were kept rather than overwritten; show them here too.</summary>
+    private void OnAccountsMerged(IReadOnlyList<Account> merged) =>
+        Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var added = 0;
+            foreach (var a in merged)
+            {
+                if (Accounts.Any(x => x.Model.Id == a.Id)) continue;
+                Add(a);
+                added++;
+            }
+            if (added == 0) return;
+            RebuildGroups();
+            NotifyHealth();
+            Log(ActivityLevel.Warn, $"Kept {added} account(s) that another copy of Alt Manager had saved.");
+            StatusMessage = $"Picked up {added} account(s) saved by another copy of the app.";
+        }), DispatcherPriority.Background);
 
     private void OnCookieRotated(object? sender, CookieRotatedEventArgs e)
     {

@@ -281,18 +281,40 @@ public sealed class RobloxApiClient : IDisposable
 
     // ---------- Account info ----------
 
-    /// <summary>The account's own Robux balance (its own cookie).</summary>
+    /// <summary>
+    /// Sends a request built by <paramref name="factory"/>, retrying when Roblox rate-limits (429) or
+    /// has a server hiccup (5xx). Honours Retry-After, else backs off 1s, 2s, 4s. Without this a burst
+    /// over many accounts leaves random gaps (e.g. a missing Robux balance).
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> factory, CancellationToken ct, int attempts = 4)
+    {
+        for (var i = 0; ; i++)
+        {
+            using var req = factory();
+            var res = await Send(req, ct);
+            var retryable = (int)res.StatusCode == 429 || (int)res.StatusCode >= 500;
+            if (!retryable || i == attempts - 1) return res;
+
+            var wait = res.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, i));
+            if (wait > TimeSpan.FromSeconds(15)) wait = TimeSpan.FromSeconds(15);
+            res.Dispose();
+            await Task.Delay(wait, ct);
+        }
+    }
+
+    /// <summary>The account's own Robux balance (its own cookie). Null if Roblox wouldn't say.</summary>
     public async Task<long?> GetRobuxAsync(string cookie, CancellationToken ct = default)
     {
-        using var req = Build(HttpMethod.Get, "https://economy.roblox.com/v1/user/currency", cookie);
         try
         {
-            using var res = await Send(req, ct);
+            using var res = await SendWithRetryAsync(
+                () => Build(HttpMethod.Get, "https://economy.roblox.com/v1/user/currency", cookie), ct);
+            CheckRotation(res, cookie);
             if (!res.IsSuccessStatusCode) return null;
             var dto = await res.Content.ReadFromJsonAsync<CurrencyDto>(cancellationToken: ct);
             return dto?.Robux;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { return null; }
     }
 
     /// <summary>
@@ -432,38 +454,166 @@ public sealed class RobloxApiClient : IDisposable
     /// <summary>The group's Robux fund balance (a cookie with group-funds permission).</summary>
     public async Task<long?> GetGroupFundsAsync(long groupId, string cookie, CancellationToken ct = default)
     {
-        using var req = Build(HttpMethod.Get, $"https://economy.roblox.com/v1/groups/{groupId}/currency", cookie);
         try
         {
-            using var res = await Send(req, ct);
+            using var res = await SendWithRetryAsync(
+                () => Build(HttpMethod.Get, $"https://economy.roblox.com/v1/groups/{groupId}/currency", cookie), ct);
             if (!res.IsSuccessStatusCode) return null;
             var dto = await res.Content.ReadFromJsonAsync<CurrencyDto>(cancellationToken: ct);
             return dto?.Robux;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { return null; }
+    }
+
+    /// <summary>
+    /// Which of these users Roblox will accept a payout for. Null if it wouldn't say. Values are
+    /// Roblox's own: "Eligible", "NotInGroup", "PayoutRestricted" (joined the group too recently).
+    /// </summary>
+    public async Task<Dictionary<long, string>?> GetPayoutEligibilityAsync(
+        long groupId, string cookie, IReadOnlyList<long> userIds, CancellationToken ct = default)
+    {
+        var result = new Dictionary<long, string>();
+        try
+        {
+            foreach (var chunk in userIds.Chunk(20))
+            {
+                var query = string.Join("&", chunk.Select(id => $"userIds={id}"));
+                using var res = await SendWithRetryAsync(() => Build(HttpMethod.Get,
+                    $"https://economy.roblox.com/v1/groups/{groupId}/users-payout-eligibility?{query}", cookie), ct);
+                if (!res.IsSuccessStatusCode) return null;
+                using var doc = System.Text.Json.JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
+                if (!doc.RootElement.TryGetProperty("usersGroupPayoutEligibility", out var map)) return null;
+                foreach (var p in map.EnumerateObject())
+                    if (long.TryParse(p.Name, out var id)) result[id] = p.Value.ToString();
+            }
+            return result;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
+                                      or InvalidOperationException) { return null; }
     }
 
     /// <summary>One-time group payout: pays each recipient a fixed Robux amount from group funds (payer cookie).</summary>
+    /// <remarks>
+    /// Roblox protects payouts with a 2-step verification challenge. When the payer's authenticator key
+    /// (<paramref name="totpSecret"/>) is saved, the challenge is answered with a fresh code — the same
+    /// thing the account owner would type; otherwise the caller gets a message saying what's needed.
+    /// </remarks>
     public async Task<(bool Ok, string Message)> GroupPayoutAsync(
-        long groupId, string cookie, IReadOnlyList<(long UserId, long Amount)> recipients, CancellationToken ct = default)
+        long groupId, string cookie, IReadOnlyList<(long UserId, long Amount)> recipients,
+        string? totpSecret = null, CancellationToken ct = default)
     {
         if (recipients.Count == 0) return (false, "no recipients");
+
+        HttpRequestMessage Make((string Id, string Meta)? proof)
+        {
+            var r = Build(HttpMethod.Post, $"https://groups.roblox.com/v1/groups/{groupId}/payouts", cookie);
+            r.Content = JsonContent.Create(new
+            {
+                PayoutType = "FixedAmount",
+                Recipients = recipients.Select(x => new { recipientId = x.UserId, recipientType = "User", amount = x.Amount })
+            });
+            if (proof is { } p)
+            {
+                r.Headers.TryAddWithoutValidation("rblx-challenge-id", p.Id);
+                r.Headers.TryAddWithoutValidation("rblx-challenge-type", "twostepverification");
+                r.Headers.TryAddWithoutValidation("rblx-challenge-metadata", p.Meta);
+            }
+            return r;
+        }
+
         try
         {
-            using var res = await SendWithCsrfAsync(() =>
+            var res = await SendWithCsrfAsync(() => Make(null), cookie, ct);
+            try
             {
-                var r = Build(HttpMethod.Post, $"https://groups.roblox.com/v1/groups/{groupId}/payouts", cookie);
-                r.Content = JsonContent.Create(new
+                if (res.IsSuccessStatusCode) return (true, "paid");
+
+                if (res.Headers.TryGetValues("rblx-challenge-id", out var ids))
                 {
-                    PayoutType = "FixedAmount",
-                    Recipients = recipients.Select(x => new { recipientId = x.UserId, recipientType = "User", amount = x.Amount })
-                });
-                return r;
-            }, cookie, ct);
-            if (res.IsSuccessStatusCode) return (true, "paid");
-            return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
+                    var challengeId = ids.First();
+                    var type = res.Headers.TryGetValues("rblx-challenge-type", out var t) ? t.First() : "";
+                    var meta = res.Headers.TryGetValues("rblx-challenge-metadata", out var m) ? m.First() : "";
+                    if (!type.Equals("twostepverification", StringComparison.OrdinalIgnoreCase))
+                        return (false, $"Roblox asked for a '{type}' security check that can't be completed here. " +
+                                       "Make one payout on roblox.com in a browser first, then try again.");
+                    if (!Totp.IsValidSecret(totpSecret))
+                        return (false, "Roblox requires 2-step verification for payouts. Save the payer's authenticator key " +
+                                       "(right-click the payer, Edit, Set 2FA secret), then try again.");
+
+                    var (proofMeta, error) = await SolveTwoStepAsync(cookie, challengeId, meta, totpSecret!, ct);
+                    if (error is not null) return (false, error);
+
+                    res.Dispose();
+                    res = await SendWithCsrfAsync(() => Make((challengeId, proofMeta!)), cookie, ct);
+                    if (res.IsSuccessStatusCode) return (true, "paid");
+                }
+
+                return (false, ExtractError(await res.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)res.StatusCode}");
+            }
+            finally { res.Dispose(); }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (false, ex.Message); }
+    }
+
+    /// <summary>
+    /// Answers a "twostepverification" challenge with an authenticator code and returns the metadata
+    /// to resend with the original request, or an error message.
+    /// </summary>
+    private async Task<(string? Meta, string? Error)> SolveTwoStepAsync(
+        string cookie, string challengeId, string metadataBase64, string totpSecret, CancellationToken ct)
+    {
+        string userId, innerChallengeId;
+        try
+        {
+            using var meta = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(metadataBase64));
+            userId = meta.RootElement.GetProperty("userId").ToString();
+            innerChallengeId = meta.RootElement.GetProperty("challengeId").ToString();
+        }
+        catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException or KeyNotFoundException
+                                      or InvalidOperationException)
+        {
+            return (null, "Roblox sent a verification challenge this app couldn't read.");
+        }
+
+        string code;
+        try { code = Totp.Generate(totpSecret); }
+        catch { return (null, "The saved 2FA secret couldn't produce a code. Re-enter it (Edit, Set 2FA secret)."); }
+
+        using var verify = await SendWithCsrfAsync(() =>
+        {
+            var r = Build(HttpMethod.Post,
+                $"https://twostepverification.roblox.com/v1/users/{userId}/challenges/authenticator/verify", cookie);
+            r.Content = JsonContent.Create(new { challengeId = innerChallengeId, actionType = "Generic", code });
+            return r;
+        }, cookie, ct);
+        var verifyBody = await verify.Content.ReadAsStringAsync(ct);
+        if (!verify.IsSuccessStatusCode)
+            return (null, "2-step verification failed: " + (ExtractError(verifyBody) ?? $"HTTP {(int)verify.StatusCode}"));
+
+        string? token;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(verifyBody);
+            token = doc.RootElement.TryGetProperty("verificationToken", out var vt) ? vt.GetString() : null;
+        }
+        catch (System.Text.Json.JsonException) { token = null; }
+        if (string.IsNullOrEmpty(token)) return (null, "2-step verification returned no token.");
+
+        var proof = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            verificationToken = token, rememberDevice = false, challengeId = innerChallengeId, actionType = "Generic"
+        });
+        using var cont = await SendWithCsrfAsync(() =>
+        {
+            var r = Build(HttpMethod.Post, "https://apis.roblox.com/challenge/v1/continue", cookie);
+            r.Content = JsonContent.Create(new { challengeId, challengeType = "twostepverification", challengeMetadata = proof });
+            return r;
+        }, cookie, ct);
+        if (!cont.IsSuccessStatusCode)
+            return (null, "Roblox rejected the verification: " +
+                          (ExtractError(await cont.Content.ReadAsStringAsync(ct)) ?? $"HTTP {(int)cont.StatusCode}"));
+
+        return (Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(proof)), null);
     }
 
     /// <summary>Pulls the first Roblox API error message out of a JSON error body, if present.</summary>

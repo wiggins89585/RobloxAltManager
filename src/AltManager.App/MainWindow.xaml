@@ -22,11 +22,46 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <!-- Toolbar button: optional icon (glyph in Tag) + label, all the same height. -->
         <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Padding" Value="10,3"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="MinWidth" Value="52"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="Icon" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding Tag, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <ContentPresenter Content="{Binding}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=Button}}" Value="{x:Null}">
+                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Destructive actions: red text, red tint on hover. -->
+        <Style x:Key="ToolbarDanger" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerTint}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <!-- Thin divider between toolbar groups. -->
+        <Style x:Key="ToolbarSep" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Margin" Value="4,0,9,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource Line}"/>
         </Style>
 
         <!-- Shared by list rows and grid cards. The host's Tag holds the MainViewModel (menus live outside the
@@ -165,42 +200,46 @@
             <ScrollViewer x:Name="ToolbarScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
                           PreviewMouseWheel="Toolbar_PreviewMouseWheel">
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Cookie" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
+                    <Button Content="Cookie" Tag="&#xE710;" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
                             ToolTip="Import .ROBLOSECURITY cookies"/>
-                    <Button Content="Login" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
+                    <Button Content="Login" Tag="&#xE77B;" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
                             ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                    <Button Content="Create" Style="{StaticResource ToolbarButton}" Command="{Binding CreateAccountCommand}"
+                    <Button Content="Create" Tag="&#xE8FA;" Style="{StaticResource ToolbarButton}" Command="{Binding CreateAccountCommand}"
                             ToolTip="Create a new Roblox account in a browser window"/>
-                    <Button Content="Bulk" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
-                            ToolTip="Log in several accounts from a user:pass,user:pass list"/>
-                    <Button Content="Validate" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
+                    <Button Content="Bulk" Tag="&#xE716;" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
+                            ToolTip="Log in several accounts from a user:pass list or a browser password export"/>
+                    <Border Style="{StaticResource ToolbarSep}"/>
+                    <Button Content="Validate" Tag="&#xE73E;" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
                             ToolTip="Re-check every account's cookie"/>
-                    <Button Content="Re-login" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
+                    <Button Content="Re-login" Tag="&#xE72C;" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
                             ToolTip="Re-login expired accounts that have a saved password"/>
-                    <Button Content="Remove" Style="{StaticResource ToolbarButton}" Command="{Binding RemoveSelectedCommand}"
-                            ToolTip="Remove the selected accounts"/>
-                    <Button Content="Move banned" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
+                    <Border Style="{StaticResource ToolbarSep}"/>
+                    <Button Content="Move banned" Tag="&#xE8DE;" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
                             ToolTip="Move permanently banned accounts to the Banned group"/>
-                    <Button Content="Remove banned" Style="{StaticResource ToolbarButton}" Command="{Binding RemovePermBannedCommand}"
+                    <Button Content="Remove" Tag="&#xE74D;" Style="{StaticResource ToolbarDanger}" Command="{Binding RemoveSelectedCommand}"
+                            ToolTip="Remove the checked accounts from the vault"/>
+                    <Button Content="Remove banned" Tag="&#xE894;" Style="{StaticResource ToolbarDanger}" Command="{Binding RemovePermBannedCommand}"
                             ToolTip="Remove permanently banned accounts (temporary bans are kept)"/>
-                    <Button Content="History" Command="{Binding OpenGameHistoryCommand}" Style="{StaticResource ToolbarButton}"
+                    <Border Style="{StaticResource ToolbarSep}"/>
+                    <Button Content="History" Tag="&#xE81C;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenGameHistoryCommand}"
                             ToolTip="Games you've launched (click one to reuse it)"/>
-                    <Button Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
+                    <Button Tag="&#xE7C3;" Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
                             ToolTip="Activity log / notifications">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Log"/>
-                            <TextBlock Text=" ●" Foreground="#F23F43"
+                            <TextBlock Text=" ●" Foreground="{DynamicResource Danger}"
                                        Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
-                    <Button Content="Schedules" Command="{Binding OpenSchedulesCommand}" Style="{StaticResource ToolbarButton}"
+                    <Button Content="Schedules" Tag="&#xE787;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenSchedulesCommand}"
                             ToolTip="Scheduled launches"/>
-                    <Button Content="Streamer" Command="{Binding ToggleStreamerCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Mask or show usernames and IDs"/>
-                    <Button Content="Lock" Command="{Binding LockCommand}" Style="{StaticResource ToolbarButton}"
+                    <Border Style="{StaticResource ToolbarSep}"/>
+                    <Button Content="Streamer" Tag="&#xE890;" Style="{StaticResource ToolbarButton}" Command="{Binding ToggleStreamerCommand}"
+                            ToolTip="Mask or show usernames and IDs (streamer mode)"/>
+                    <Button Content="Lock" Tag="&#xE72E;" Style="{StaticResource ToolbarButton}" Command="{Binding LockCommand}"
                             ToolTip="Lock the app (Ctrl+L)"/>
-                    <Button Content="Settings" Command="{Binding OpenSettingsCommand}" Style="{StaticResource ToolbarButton}"
-                            Margin="0" ToolTip="Open settings"/>
+                    <Button Content="Settings" Tag="&#xE713;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenSettingsCommand}" Margin="0"
+                            ToolTip="Open settings"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>
@@ -222,7 +261,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="{Binding ShowGroups, Converter={StaticResource BoolWidth}, ConverterParameter=120}"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="{Binding ShowLaunch, Converter={StaticResource BoolWidth}, ConverterParameter=250}"/>
+                <ColumnDefinition Width="{Binding ShowLaunch, Converter={StaticResource BoolWidth}, ConverterParameter=262}"/>
             </Grid.ColumnDefinitions>
 
             <!-- ================= Groups ================= -->
@@ -235,10 +274,10 @@
                         <TextBlock Text="GROUPS" Style="{StaticResource Label}" VerticalAlignment="Center"/>
                     </DockPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,4,4">
-                        <Button Content="Edit" Padding="4,1" Margin="0,0,4,0" FontSize="10"
+                        <Button Content="Edit" Padding="8,2" MinHeight="22" Margin="0,0,4,0" FontSize="11"
                                 Command="{Binding EditGroupCommand}" IsEnabled="{Binding CanEditSelectedGroup}"
                                 ToolTip="Rename selected custom group"/>
-                        <Button Content="Delete" Padding="4,1" Margin="0" FontSize="10"
+                        <Button Content="Delete" Padding="8,2" MinHeight="22" Margin="0" FontSize="11"
                                 Command="{Binding DeleteGroupCommand}" IsEnabled="{Binding CanEditSelectedGroup}"
                                 ToolTip="Delete selected custom group"/>
                     </StackPanel>
@@ -286,10 +325,12 @@
                               ToolTip="Show only accounts with this status"/>
 
                     <Grid>
-                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="24,4,6,4"
                                  ToolTip="Filter by username, note, tag, game ID, or user ID"/>
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" IsHitTestVisible="False"
+                                   Foreground="{DynamicResource Muted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                         <TextBlock Text="Search accounts…" Foreground="{DynamicResource Muted}" IsHitTestVisible="False"
-                                   VerticalAlignment="Center" Margin="8,0,0,0">
+                                   VerticalAlignment="Center" Margin="27,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -396,7 +437,8 @@
                         Visibility="{Binding IsGridView, Converter={StaticResource BoolVisInv}}">
                 <DataGrid ItemsSource="{Binding AccountsView}" AutoGenerateColumns="False"
                           CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
-                          MinRowHeight="42" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
+                          MinRowHeight="46" AlternationCount="2"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Line}"
                           SelectionMode="Extended" FontSize="12"
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           Background="Transparent" RowBackground="Transparent"
@@ -421,7 +463,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="" Width="44" MinWidth="44">
+                        <DataGridTemplateColumn Header="" Width="50" MinWidth="50">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <Grid Width="34" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -445,12 +487,13 @@
                                 <DataTemplate DataType="vm:AccountViewModel">
                                     <StackPanel VerticalAlignment="Center" ToolTip="{Binding Username}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Username}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Username}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="⇄" FontSize="11" Margin="5,0,0,0" Foreground="{DynamicResource Accent}"
                                                        ToolTip="Proxy enabled for this account"
                                                        Visibility="{Binding HasProxy, Converter={StaticResource BoolVis}}"/>
                                         </StackPanel>
-                                        <TextBlock Foreground="{DynamicResource Muted}" FontSize="10" TextTrimming="CharacterEllipsis">
+                                        <TextBlock Foreground="{DynamicResource Muted}" FontSize="10" Opacity="0.8" Margin="0,1,0,0"
+                                                   TextTrimming="CharacterEllipsis">
                                             <Run Text="ID"/> <Run Text="{Binding UserIdText, Mode=OneWay}"/>
                                         </TextBlock>
                                         <TextBlock Text="{Binding TagsText}" Foreground="{DynamicResource Accent}" FontSize="10"
@@ -481,14 +524,18 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="STATUS" Width="80" MinWidth="76" SortMemberPath="Status">
+                        <DataGridTemplateColumn Header="STATUS" Width="104" MinWidth="92" SortMemberPath="Status">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="vm:AccountViewModel">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0"
-                                                 Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
-                                        <TextBlock Text="{Binding StatusLabel}"/>
-                                    </StackPanel>
+                                    <Border CornerRadius="9" Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                            Background="{Binding Status, Converter={StaticResource StatusTint}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                     Fill="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                            <TextBlock Text="{Binding StatusLabel}" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                        </StackPanel>
+                                    </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -516,12 +563,15 @@
             </DockPanel>
 
             <!-- ================= Launch + processes ================= -->
-            <ScrollViewer Grid.Column="2" Margin="8,0,0,0" VerticalScrollBarVisibility="Auto"
+            <Border Grid.Column="2" Margin="8,0,0,0" Width="1" HorizontalAlignment="Left"
+                    Background="{DynamicResource Line}" Visibility="{Binding ShowLaunch, Converter={StaticResource BoolVis}}"/>
+            <ScrollViewer Grid.Column="2" Margin="17,0,0,0" VerticalScrollBarVisibility="Auto"
                           Visibility="{Binding ShowLaunch, Converter={StaticResource BoolVis}}">
                 <StackPanel>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="LAUNCH" Style="{StaticResource Heading}"/>
+                            <TextBlock Text="LAUNCH" Style="{StaticResource Heading}" FontSize="13"/>
+                            <Border Height="1" Background="{DynamicResource Line}" Margin="0,6,0,2"/>
 
                             <TextBlock Text="Preset" Style="{StaticResource Label}"/>
                             <DockPanel>
@@ -541,7 +591,7 @@
                                 <Button DockPanel.Dock="Right" Content="Servers…" Margin="6,0,0,0"
                                         Command="{Binding OpenServerBrowserCommand}"
                                         ToolTip="Browse this game's servers and join a specific one"/>
-                                <TextBlock Text="Job ID (specific server, optional)" Style="{StaticResource Label}"
+                                <TextBlock Text="Job ID (optional)" ToolTip="A specific server to join; leave blank for any" Style="{StaticResource Label}"
                                            VerticalAlignment="Center"/>
                             </DockPanel>
                             <TextBox Text="{Binding JobId, UpdateSourceTrigger=PropertyChanged}"/>
@@ -551,11 +601,17 @@
                             <Slider Minimum="0" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
                                     Value="{Binding StaggerSeconds}"/>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <Button Content="▶ Launch Selected" Command="{Binding LaunchSelectedCommand}"
-                                        Style="{StaticResource AccentButton}"/>
-                                <Button Content="Cancel" Command="{Binding CancelLaunchCommand}"/>
-                            </StackPanel>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Content="▶  Launch Selected" Command="{Binding LaunchSelectedCommand}"
+                                        Style="{StaticResource AccentButton}" MinHeight="34" FontSize="13"
+                                        ToolTip="Launch every checked account into the game above"/>
+                                <Button Grid.Column="1" Content="Cancel" Command="{Binding CancelLaunchCommand}"
+                                        MinHeight="34" Margin="6,0,0,0" ToolTip="Stop the launch queue"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -563,8 +619,10 @@
                         <StackPanel>
                             <DockPanel>
                                 <TextBlock Text="ACTIVE CLIENTS" Style="{StaticResource Heading}" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ActiveProcesses.Count}" HorizontalAlignment="Right" FontSize="11"
-                                           Foreground="{DynamicResource Muted}"/>
+                                <Border HorizontalAlignment="Right" CornerRadius="9" Padding="8,1" Background="{DynamicResource Selection}">
+                                    <TextBlock Text="{Binding ActiveProcesses.Count}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Accent}"/>
+                                </Border>
                             </DockPanel>
                             <ItemsControl ItemsSource="{Binding ActiveProcesses}" Margin="0,4,0,0" FontSize="12">
                                 <ItemsControl.ItemTemplate>

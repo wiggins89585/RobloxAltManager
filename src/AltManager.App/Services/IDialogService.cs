@@ -46,7 +46,8 @@ public interface IDialogService
     /// <summary>Opens the group-payout window (modal).</summary>
     void OpenGroupPayout(IReadOnlyList<ViewModels.AccountViewModel> allAccounts,
                          IReadOnlyList<ViewModels.AccountViewModel> recipients,
-                         RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie);
+                         RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie,
+                         Func<ViewModels.AccountViewModel, string?>? getTotp = null);
     /// <summary>Opens the server browser for a place; onJoin gets the chosen job ID.</summary>
     void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin);
     /// <summary>Opens the outfits picker for an account (non-modal).</summary>
@@ -218,8 +219,9 @@ public sealed class DialogService : IDialogService
 
     public void OpenGroupPayout(IReadOnlyList<ViewModels.AccountViewModel> allAccounts,
                                 IReadOnlyList<ViewModels.AccountViewModel> recipients,
-                                RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie) =>
-        new GroupPayoutWindow(allAccounts, recipients, api, getCookie) { Owner = Owner }.ShowDialog();
+                                RobloxApiClient api, Func<ViewModels.AccountViewModel, string?> getCookie,
+                                Func<ViewModels.AccountViewModel, string?>? getTotp = null) =>
+        new GroupPayoutWindow(allAccounts, recipients, api, getCookie, getTotp) { Owner = Owner }.ShowDialog();
 
     public void OpenServerBrowser(long placeId, RobloxApiClient api, Action<string> onJoin) =>
         new ServerBrowserWindow(placeId, api, onJoin) { Owner = Owner }.Show();

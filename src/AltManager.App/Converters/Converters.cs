@@ -8,11 +8,12 @@ namespace AltManager.App.Converters;
 
 public sealed class StatusToBrushConverter : IValueConverter
 {
-    private static readonly Brush Valid = Frozen("#23A55A");
-    private static readonly Brush Expired = Frozen("#F23F43");
-    private static readonly Brush Error = Frozen("#F0B232");
-    private static readonly Brush Banned = Frozen("#B4181B");
-    private static readonly Brush Unknown = Frozen("#80848E");
+    // Valid green, Expired red, Banned orange, Error amber, Unknown gray.
+    internal static readonly Brush Valid = Frozen("#35B779");
+    internal static readonly Brush Expired = Frozen("#E5534B");
+    internal static readonly Brush Error = Frozen("#D9B44A");
+    internal static readonly Brush Banned = Frozen("#E8853D");
+    internal static readonly Brush Unknown = Frozen("#8B948E");
 
     public object Convert(object value, Type t, object p, CultureInfo c) => value switch
     {
@@ -31,6 +32,27 @@ public sealed class StatusToBrushConverter : IValueConverter
         b.Freeze();
         return b;
     }
+}
+
+/// <summary>The status colour at low opacity, for the background of a status badge.</summary>
+public sealed class StatusToTintConverter : IValueConverter
+{
+    private static readonly Dictionary<AccountStatus, Brush> Cache = new();
+
+    public object Convert(object value, Type t, object p, CultureInfo c)
+    {
+        var status = value is AccountStatus s ? s : AccountStatus.Unknown;
+        lock (Cache)
+        {
+            if (Cache.TryGetValue(status, out var b)) return b;
+            var full = (SolidColorBrush)new StatusToBrushConverter().Convert(status, t, p, c);
+            var tint = new SolidColorBrush(Color.FromArgb(0x2E, full.Color.R, full.Color.G, full.Color.B));
+            tint.Freeze();
+            return Cache[status] = tint;
+        }
+    }
+
+    public object ConvertBack(object v, Type t, object p, CultureInfo c) => throw new NotSupportedException();
 }
 
 public sealed class ActivityLevelToBrushConverter : IValueConverter

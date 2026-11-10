@@ -25,6 +25,22 @@ public sealed class AccountVault : IDisposable
     private readonly IVaultCipher _cipher;
     private readonly SemaphoreSlim _io = new(1, 1);
     private VaultFile _file;
+    // Accounts the user removed on purpose in this session (so a merge never brings them back).
+    private readonly HashSet<Guid> _removed = new();
+    // What we last wrote, to notice when another process changed the file underneath us.
+    private DateTime _lastWriteUtc;
+    private long _lastWriteLength = -1;
+    private int _lastSavedCount;
+    private DateTime _lastBackupUtc;
+
+    /// <summary>Raised when a save found accounts on disk that this session didn't know about (written by
+    /// another running copy or an import) and kept them instead of overwriting them.</summary>
+    public event Action<IReadOnlyList<Account>>? AccountsMerged;
+
+    /// <summary>Set when the vault file was unreadable and an older backup was loaded instead.</summary>
+    public string? RecoveredFrom { get; private set; }
+
+    private string BackupFolder => Path.Combine(Path.GetDirectoryName(_path)!, "backups");
 
     public IReadOnlyList<Account> Accounts => _file.Accounts;
 
@@ -43,7 +59,7 @@ public sealed class AccountVault : IDisposable
     public static (string? CipherId, byte[]? Salt) Inspect(string path)
     {
         if (!File.Exists(path)) return (null, null);
-        var f = JsonSerializer.Deserialize<VaultFile>(File.ReadAllText(path), Json);
+        var f = ReadWithRecovery(path, out _);
         return (f?.Cipher, f?.Salt is null ? null : Convert.FromBase64String(f.Salt));
     }
 
@@ -53,11 +69,11 @@ public sealed class AccountVault : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         VaultFile file;
 
+        string? recoveredFrom = null;
         if (File.Exists(path))
         {
-            await using var s = File.OpenRead(path);
-            file = await JsonSerializer.DeserializeAsync<VaultFile>(s, Json)
-                   ?? throw new InvalidDataException("Vault file is empty or corrupt.");
+            file = ReadWithRecovery(path, out recoveredFrom)
+                   ?? throw new InvalidDataException("Vault file is empty or corrupt, and no usable backup was found.");
 
             if (file.Cipher != cipher.Id)
                 throw new InvalidOperationException($"Vault uses '{file.Cipher}', but '{cipher.Id}' was supplied.");
@@ -77,9 +93,60 @@ public sealed class AccountVault : IDisposable
             };
         }
 
-        var vault = new AccountVault(path, cipher, file);
+        var vault = new AccountVault(path, cipher, file) { RecoveredFrom = recoveredFrom };
+        vault._lastSavedCount = file.Accounts.Count;
+        try
+        {
+            var newest = Directory.Exists(vault.BackupFolder)
+                ? new DirectoryInfo(vault.BackupFolder).GetFiles("vault-*.json").OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault()
+                : null;
+            vault._lastBackupUtc = newest?.LastWriteTimeUtc ?? DateTime.MinValue;
+        }
+        catch { /* backups are best-effort */ }
         await vault.SaveAsync();
         return vault;
+    }
+
+    /// <summary>
+    /// Reads the vault file; if it's unreadable (truncated by a crash or power loss), falls back to the
+    /// .bak and then the rolling backups, newest first. The unreadable file is kept as *.corrupt-*.
+    /// </summary>
+    private static VaultFile? ReadWithRecovery(string path, out string? recoveredFrom)
+    {
+        recoveredFrom = null;
+        var primary = TryRead(path);
+        if (primary is not null) return primary;
+
+        var candidates = new List<string> { path + ".bak" };
+        try
+        {
+            var folder = Path.Combine(Path.GetDirectoryName(path)!, "backups");
+            if (Directory.Exists(folder))
+                candidates.AddRange(new DirectoryInfo(folder).GetFiles("vault-*.json")
+                    .OrderByDescending(f => f.LastWriteTimeUtc).Select(f => f.FullName));
+        }
+        catch { /* ignore */ }
+
+        foreach (var c in candidates)
+        {
+            var f = TryRead(c);
+            if (f is null) continue;
+            try { File.Copy(path, $"{path}.corrupt-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true); } catch { }
+            recoveredFrom = c;
+            return f;
+        }
+        return null;
+    }
+
+    private static VaultFile? TryRead(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+            var f = JsonSerializer.Deserialize<VaultFile>(File.ReadAllText(path), Json);
+            return f is { Cipher.Length: > 0, Check.Length: > 0 } ? f : null;
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { return null; }
     }
 
     public string GetCookie(Account account)
@@ -113,7 +180,12 @@ public sealed class AccountVault : IDisposable
         return acct;
     }
 
-    public bool Remove(Guid id) => _file.Accounts.RemoveAll(a => a.Id == id) > 0;
+    public bool Remove(Guid id)
+    {
+        if (_file.Accounts.RemoveAll(a => a.Id == id) == 0) return false;
+        _removed.Add(id); // an explicit removal: a later merge must not resurrect it
+        return true;
+    }
 
     /// <summary>True when the vault is unlocked with a master password (AES), not DPAPI.</summary>
     public bool IsPasswordProtected => _cipher.Id == "aesgcm";
@@ -147,15 +219,78 @@ public sealed class AccountVault : IDisposable
         await _io.WaitAsync();
         try
         {
+            // 1. Never overwrite accounts this session doesn't know about. If another copy of the app (or
+            //    an import) wrote the file since we last did, fold its accounts in instead of erasing them.
+            var merged = MergeFromDisk();
+
+            // 2. Keep rolling backups, and always take one right before a save that shrinks the vault.
+            BackupIfDue();
+
+            // 3. Serialise on this thread (a snapshot), so the list can't change mid-write, then write
+            //    atomically: temp file + replace.
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(_file, Json);
             var tmp = _path + ".tmp";
-            await using (var s = File.Create(tmp))
-                await JsonSerializer.SerializeAsync(s, _file, Json);
+            await File.WriteAllBytesAsync(tmp, bytes);
 
             if (File.Exists(_path)) File.Replace(tmp, _path, _path + ".bak", ignoreMetadataErrors: true);
             else File.Move(tmp, _path);
-        }
 
+            var info = new FileInfo(_path);
+            _lastWriteUtc = info.LastWriteTimeUtc;
+            _lastWriteLength = info.Length;
+            _lastSavedCount = _file.Accounts.Count;
+
+            if (merged.Count > 0) AccountsMerged?.Invoke(merged);
+        }
         finally { _io.Release(); }
+    }
+
+    /// <summary>Adds any accounts found on disk that aren't in memory and weren't removed on purpose.</summary>
+    private List<Account> MergeFromDisk()
+    {
+        var added = new List<Account>();
+        try
+        {
+            var info = new FileInfo(_path);
+            if (!info.Exists) return added;
+            // Unchanged since our own last write: nothing to merge.
+            if (_lastWriteLength >= 0 && info.LastWriteTimeUtc == _lastWriteUtc && info.Length == _lastWriteLength) return added;
+
+            var disk = TryRead(_path);
+            if (disk is null || disk.Cipher != _file.Cipher || disk.Check != _file.Check) return added; // different key: not ours to merge
+
+            foreach (var a in disk.Accounts)
+            {
+                if (_removed.Contains(a.Id)) continue;
+                if (_file.Accounts.Any(x => x.Id == a.Id || (a.UserId != 0 && x.UserId == a.UserId))) continue;
+                _file.Accounts.Add(a);
+                added.Add(a);
+            }
+        }
+        catch { /* merging is a safety net; a failure here must not block saving */ }
+        return added;
+    }
+
+    /// <summary>Copies the current vault file into backups\ at most every few hours, and always before a
+    /// save that would leave fewer accounts than the last one. Keeps the newest 30.</summary>
+    private void BackupIfDue()
+    {
+        try
+        {
+            if (!File.Exists(_path)) return;
+            var shrinking = _file.Accounts.Count < _lastSavedCount;
+            if (!shrinking && DateTime.UtcNow - _lastBackupUtc < TimeSpan.FromHours(3)) return;
+            if (new FileInfo(_path).Length < 64) return; // nothing worth keeping
+
+            Directory.CreateDirectory(BackupFolder);
+            File.Copy(_path, Path.Combine(BackupFolder, $"vault-{DateTime.Now:yyyyMMdd-HHmmss}.json"), overwrite: true);
+            _lastBackupUtc = DateTime.UtcNow;
+
+            foreach (var old in new DirectoryInfo(BackupFolder).GetFiles("vault-*.json")
+                         .OrderByDescending(f => f.LastWriteTimeUtc).Skip(30))
+                old.Delete();
+        }
+        catch { /* backups are best-effort */ }
     }
 
     public void Dispose()

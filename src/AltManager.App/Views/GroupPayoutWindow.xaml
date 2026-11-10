@@ -34,7 +34,12 @@
             </ScrollViewer>
         </Border>
 
-        <TextBlock x:Name="TotalText" Margin="0,8,0,0" FontWeight="SemiBold"/>
+        <TextBlock x:Name="TotalText" Margin="0,8,0,0" FontWeight="SemiBold" TextWrapping="Wrap"/>
+        <!-- Per-account result of the last payout -->
+        <TextBox x:Name="ResultBox" IsReadOnly="True" Visibility="Collapsed" Margin="0,6,0,0" MaxHeight="150"
+                 TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontSize="11"/>
+        <TextBlock Foreground="{DynamicResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Text="Recipients must already be in the group. If Roblox asks for 2-step verification, save the payer's authenticator key first (right-click the payer → Edit → Set 2FA secret)."/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
             <Button x:Name="PayButton" Content="Pay" Width="100" Style="{StaticResource AccentButton}" Click="Pay_Click"/>

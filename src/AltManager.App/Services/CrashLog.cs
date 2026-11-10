@@ -22,6 +22,9 @@ public static class CrashLog
         {
             Write("Dispatcher", e.Exception);
             e.Handled = true; // keep the app alive; the error is on disk
+            if (IsHarmless(e.Exception)) return;
+            // Tell the user once per distinct problem, not every time it repeats.
+            lock (Shown) if (!Shown.Add(e.Exception.GetType().FullName + "|" + e.Exception.Message)) return;
             MessageBox.Show(
                 "Something went wrong, but the app is still running. Details were saved to:\n" + Folder,
                 "Alt Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -29,6 +32,15 @@ public static class CrashLog
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Write("AppDomain", e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) => { Write("Task", e.Exception); e.SetObserved(); };
     }
+
+    private static readonly HashSet<string> Shown = new();
+
+    /// <summary>Known-benign failures that need no dialog: the window frame call that Windows rejects
+    /// while desktop composition is off or switching (Remote Desktop), and a list refresh that raced a
+    /// cell edit.</summary>
+    private static bool IsHarmless(Exception ex) =>
+        ex is System.Runtime.InteropServices.COMException { HResult: unchecked((int)0x80263001) }
+        || (ex is InvalidOperationException && ex.Message.Contains("AddNew or EditItem", StringComparison.Ordinal));
 
     /// <summary>Appends an entry to today's log. Never throws.</summary>
     public static void Write(string source, Exception? ex)

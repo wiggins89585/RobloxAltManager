@@ -16,13 +16,15 @@ public sealed record ThemePreset(
 /// </summary>
 public static class Theme
 {
-    public const string DefaultAccent = "#5865F2";
-    public const string DefaultTheme = "Dark";
+    public const string DefaultAccent = "#35B779";
+    public const string DefaultTheme = "Evergreen";
 
     /// <summary>Built-in themes. Each is a complete palette; the accent can be overridden per user.</summary>
     public static readonly IReadOnlyList<ThemePreset> Themes = new[]
     {
         //                 Name              Bg         Panel      Raised     Hover      Line       Fg         Muted      Accent     Selection
+        // Default: charcoal with a green accent — calm, high-contrast, professional.
+        new ThemePreset("Evergreen",     "#252A28", "#2D3330", "#363D39", "#414A44", "#48514B", "#E5EAE6", "#9BA69F", "#35B779", "#2F4A3C"),
         new ThemePreset("Dark",          "#1E1F22", "#2B2D31", "#383A40", "#404249", "#3F4147", "#DBDEE1", "#949BA4", "#5865F2", "#33386A"),
         new ThemePreset("Light",         "#F2F3F5", "#FFFFFF", "#E3E5E8", "#D7D9DD", "#D1D3D7", "#1E1F22", "#5C5E66", "#5865F2", "#D7DBF7"),
         new ThemePreset("Midnight",      "#0B0D10", "#15181D", "#1E232B", "#272D37", "#262B33", "#E6EAF0", "#8A93A3", "#3B82F6", "#16305E"),
@@ -75,6 +77,8 @@ public static class Theme
         TryParseColor(t.Fg, out var fg);
         app.Resources["ThumbBrush"] = new SolidColorBrush(Color.FromArgb(0x59, fg.R, fg.G, fg.B));
         app.Resources["ThumbHoverBrush"] = new SolidColorBrush(Color.FromArgb(0x8C, fg.R, fg.G, fg.B));
+        // Faint stripe for every other table row.
+        app.Resources["AltRow"] = new SolidColorBrush(Color.FromArgb(0x0A, fg.R, fg.G, fg.B));
 
         // Popups and windows without glass sit on nothing, so they need colours with no transparency.
         TryParseColor(t.Panel, out var popup);

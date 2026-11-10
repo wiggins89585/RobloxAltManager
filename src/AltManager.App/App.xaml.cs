@@ -32,6 +32,15 @@ public partial class App : Application
         CrashLog.Install(this);
         ShutdownMode = ShutdownMode.OnExplicitShutdown; // don't exit when the password prompt closes
 
+        // One copy per user. Two copies each hold their own in-memory account list, and whichever saves
+        // last used to overwrite the other's accounts — the cause of "my accounts got wiped".
+        if (!AcquireSingleInstance())
+        {
+            ActivateRunningInstance();
+            Shutdown();
+            return;
+        }
+
         var guard = new MultiInstanceGuard();
         var guardOk = guard.Acquire();
 
@@ -70,10 +79,61 @@ public partial class App : Application
                 "Close all Roblox windows; the manager will retry on your next launch.",
                 "Multi-instance", MessageBoxButton.OK, MessageBoxImage.Information);
 
+        if (vault.RecoveredFrom is { } backup)
+            MessageBox.Show(window,
+                "The account vault file was unreadable, so the most recent backup was loaded instead:\n\n" + backup +
+                "\n\nThe unreadable file was kept next to it. Accounts added after that backup may be missing.",
+                "Vault restored from backup", MessageBoxButton.OK, MessageBoxImage.Warning);
+
         await _vm.LoadAvatarsAsync(vault.Accounts.Select(a => a.UserId));
         await _vm.RunStartupTasksAsync();
         _ = CheckForUpdatesAsync(settings, e.Args.Contains("--password-vault"), window);
     }
+
+    private Mutex? _instance;
+
+    private bool AcquireSingleInstance()
+    {
+        var name = "AltManager-SingleInstance-" + Environment.UserName;
+        foreach (var scope in new[] { "Global\\", "Local\\" })
+        {
+            try
+            {
+                _instance = new Mutex(initiallyOwned: true, scope + name, out var createdNew);
+                if (createdNew) return true;
+                _instance.Dispose();
+                _instance = null;
+                return false;
+            }
+            catch (UnauthorizedAccessException) { /* try the session-local name */ }
+            catch (IOException) { /* same */ }
+        }
+        return true; // couldn't create a named mutex at all: don't block startup over it
+    }
+
+    private static void ActivateRunningInstance()
+    {
+        try
+        {
+            using var me = Process.GetCurrentProcess();
+            var other = Process.GetProcessesByName(me.ProcessName)
+                .FirstOrDefault(p => p.Id != me.Id && p.MainWindowHandle != IntPtr.Zero);
+            if (other is not null)
+            {
+                ShowWindow(other.MainWindowHandle, 9); // SW_RESTORE
+                SetForegroundWindow(other.MainWindowHandle);
+                return;
+            }
+        }
+        catch { /* fall through to the message */ }
+        MessageBox.Show("Alt Manager is already running.", "Alt Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     private static string Truncate(string text, int max) =>
         text.Length <= max ? text : text[..max].TrimEnd() + "…";
