@@ -251,7 +251,8 @@ public sealed class RobloxApiClient : IDisposable
                 var dto = await res.Content.ReadFromJsonAsync<PresenceResponse>(cancellationToken: ct);
                 foreach (var p in dto?.UserPresences ?? new())
                     result[p.UserId] = new UserPresence(p.UserId, (PresenceType)p.UserPresenceType,
-                        string.IsNullOrWhiteSpace(p.LastLocation) ? null : p.LastLocation);
+                        string.IsNullOrWhiteSpace(p.LastLocation) ? null : p.LastLocation,
+                        p.PlaceId ?? p.RootPlaceId, string.IsNullOrWhiteSpace(p.GameId) ? null : p.GameId);
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { /* leave missing */ }
         }
@@ -857,7 +858,10 @@ public sealed class RobloxApiClient : IDisposable
     private sealed record PresenceDto(
         [property: JsonPropertyName("userId")] long UserId,
         [property: JsonPropertyName("userPresenceType")] int UserPresenceType,
-        [property: JsonPropertyName("lastLocation")] string? LastLocation);
+        [property: JsonPropertyName("lastLocation")] string? LastLocation,
+        [property: JsonPropertyName("placeId")] long? PlaceId = null,
+        [property: JsonPropertyName("rootPlaceId")] long? RootPlaceId = null,
+        [property: JsonPropertyName("gameId")] string? GameId = null);
 
     private sealed record ThumbDto(
         [property: JsonPropertyName("targetId")] long TargetId,

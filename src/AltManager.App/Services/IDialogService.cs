@@ -56,6 +56,10 @@ public interface IDialogService
     void OpenActivityLog(System.Collections.ObjectModel.ObservableCollection<ViewModels.ActivityEntry> activity);
     /// <summary>Opens the scheduled-launches manager (modal); save is called after each change.</summary>
     void OpenSchedules(List<LaunchSchedule> schedules, IEnumerable<string> groups, Action save);
+    /// <summary>Opens the Tools window (one at a time).</summary>
+    void OpenTools(ViewModels.MainViewModel vm);
+    /// <summary>Opens the client Monitor (one at a time, non-modal).</summary>
+    void OpenMonitor(ViewModels.MainViewModel vm);
 }
 
 /// <param name="Cookie">Captured cookie, or null.</param>
@@ -234,6 +238,25 @@ public sealed class DialogService : IDialogService
 
     public void OpenSchedules(List<LaunchSchedule> schedules, IEnumerable<string> groups, Action save) =>
         new SchedulesWindow(schedules, groups, save) { Owner = Owner }.ShowDialog();
+
+    private static ToolsWindow? _tools;
+    private static MonitorWindow? _monitor;
+
+    public void OpenTools(ViewModels.MainViewModel vm)
+    {
+        if (_tools is { IsLoaded: true }) { _tools.Activate(); return; }
+        _tools = new ToolsWindow(vm) { Owner = Owner };
+        _tools.Closed += (_, _) => _tools = null;
+        _tools.Show();
+    }
+
+    public void OpenMonitor(ViewModels.MainViewModel vm)
+    {
+        if (_monitor is { IsLoaded: true }) { _monitor.Activate(); return; }
+        _monitor = new MonitorWindow(vm);
+        _monitor.Closed += (_, _) => _monitor = null;
+        _monitor.Show();
+    }
 
     private static System.Windows.Media.Brush Brush(string hex) =>
         (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;

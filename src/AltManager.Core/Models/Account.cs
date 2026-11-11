@@ -91,7 +91,9 @@ public sealed class SavedWindowBounds
 public enum PresenceType { Offline = 0, Online = 1, InGame = 2, InStudio = 3 }
 
 /// <summary>An account's current Roblox presence.</summary>
-public sealed record UserPresence(long UserId, PresenceType Type, string? LastLocation);
+/// <param name="PlaceId">The game they're in, when Roblox shows it to the asking account.</param>
+/// <param name="GameId">The server (job) they're in, when visible — used to follow them.</param>
+public sealed record UserPresence(long UserId, PresenceType Type, string? LastLocation, long? PlaceId = null, string? GameId = null);
 
 /// <summary>A game returned by Roblox search.</summary>
 public sealed record GameSearchResult(long PlaceId, string Name, int? Players);

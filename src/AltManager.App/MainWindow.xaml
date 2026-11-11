@@ -233,6 +233,10 @@
                     </Button>
                     <Button Content="Schedules" Tag="&#xE787;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenSchedulesCommand}"
                             ToolTip="Scheduled launches"/>
+                    <Button Content="Monitor" Tag="&#xE9D9;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenMonitorCommand}"
+                            ToolTip="Live CPU, RAM and previews of every running client"/>
+                    <Button Content="Tools" Tag="&#xE90F;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenToolsCommand}"
+                            ToolTip="Max alts, graphics, RAM cleaner, window tools, hotkeys, setups, anti-AFK, macro, Discord"/>
                     <Border Style="{StaticResource ToolbarSep}"/>
                     <Button Content="Streamer" Tag="&#xE890;" Style="{StaticResource ToolbarButton}" Command="{Binding ToggleStreamerCommand}"
                             ToolTip="Mask or show usernames and IDs (streamer mode)"/>
@@ -595,6 +599,12 @@
                                            VerticalAlignment="Center"/>
                             </DockPanel>
                             <TextBox Text="{Binding JobId, UpdateSourceTrigger=PropertyChanged}"/>
+                            <UniformGrid Columns="2" Margin="0,4,0,0">
+                                <Button Content="Follow…" Margin="0,0,3,0" Command="{Binding FollowPlayerCommand}"
+                                        ToolTip="Join the game and server a Roblox user is in right now"/>
+                                <Button Content="Random" Margin="3,0,0,0" Command="{Binding RandomServerCommand}"
+                                        ToolTip="Pick a random public server with free slots"/>
+                            </UniformGrid>
                             <TextBlock Style="{StaticResource Label}">
                                 <Run Text="Stagger delay:"/> <Run Text="{Binding StaggerSeconds, StringFormat={}{0:0} s, Mode=OneWay}"/>
                             </TextBlock>
@@ -632,6 +642,10 @@
                                                     ToolTip="Close this client"
                                                     Command="{Binding DataContext.KillProcessCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"/>
+                                            <Button DockPanel.Dock="Right" Content="📌" Padding="5,1" Margin="0,0,4,0"
+                                                    ToolTip="Pin / unpin: keep this window at its current spot and size"
+                                                    Command="{Binding DataContext.TogglePinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
                                             <TextBlock VerticalAlignment="Center">
                                                 <Run Text="{Binding AccountLabel, Mode=OneWay}" FontWeight="SemiBold"/>
                                                 <Run Text="  PID" Foreground="{DynamicResource Muted}"/>
@@ -650,8 +664,21 @@
                             </DockPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                 <Button Content="▦ Arrange Windows" Command="{Binding ArrangeWindowsCommand}"/>
+                                <Button Content="Minimize All" Command="{Binding MinimizeAllCommand}"
+                                        ToolTip="Minimize every client window"/>
                                 <Button Content="Close All" Command="{Binding KillAllCommand}"/>
                             </StackPanel>
+                            <WrapPanel Margin="0,8,0,0">
+                                <CheckBox Content="Max alts" IsChecked="{Binding MaxAltsOn}" Margin="0,0,14,0" Foreground="{DynamicResource Fg}"
+                                          ToolTip="Only the window you're using runs at full speed; the rest are throttled"/>
+                                <CheckBox Content="Anti-AFK" IsChecked="{Binding AntiAfkOn}" Margin="0,0,14,0" Foreground="{DynamicResource Fg}"
+                                          ToolTip="Stop Roblox's 20-minute idle kick (settings in Tools)"/>
+                            </WrapPanel>
+                            <DockPanel Margin="0,6,0,0">
+                                <Button DockPanel.Dock="Right" Content="Clean" Padding="8,1" Command="{Binding CleanRamCommand}"
+                                        ToolTip="Trim every client's memory now"/>
+                                <TextBlock Text="{Binding MemoryText}" Style="{StaticResource Label}" Margin="0" VerticalAlignment="Center"/>
+                            </DockPanel>
                         </StackPanel>
                     </Border>
 

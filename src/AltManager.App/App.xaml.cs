@@ -32,6 +32,14 @@ public partial class App : Application
         CrashLog.Install(this);
         ShutdownMode = ShutdownMode.OnExplicitShutdown; // don't exit when the password prompt closes
 
+        // Elevated helper for Tools → Deep clean: flush Windows' memory lists, then exit.
+        if (e.Args.Contains("--memclean"))
+        {
+            var ok = AltManager.Core.Launch.MemoryCleaner.DeepClean();
+            Shutdown(ok ? 0 : 1);
+            return;
+        }
+
         // One copy per user. Two copies each hold their own in-memory account list, and whichever saves
         // last used to overwrite the other's accounts — the cause of "my accounts got wiped".
         if (!AcquireSingleInstance())
@@ -72,6 +80,7 @@ public partial class App : Application
         MainWindow = window;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         window.Show();
+        _vm.AttachHotkeys(new System.Windows.Interop.WindowInteropHelper(window).Handle);
 
         if (!guardOk)
             MessageBox.Show(window,

@@ -1,0 +1,70 @@
+# Builds Alt Manager on GitHub and has SignPath Foundation code-sign it (free for open-source projects).
+#
+# This only runs when you start it by hand (Actions tab → "Signed release" → Run workflow), so it does
+# nothing until SignPath has approved the project. Once approved, add these in
+# Settings → Secrets and variables → Actions:
+#   secret    SIGNPATH_API_TOKEN          (SignPath → your user → API token, with submitter rights)
+#   variable  SIGNPATH_ORGANIZATION_ID    (shown on your SignPath organization page)
+#   variable  SIGNPATH_PROJECT_SLUG       (e.g. RobloxAltManager)
+#   variable  SIGNPATH_POLICY_SLUG        (release-signing)
+# SignPath also needs the GitHub artifact configuration they give you during onboarding.
+
+name: Signed release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to attach the signed zip to (e.g. v1.0.29)"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-and-sign:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish
+        run: dotnet publish src/AltManager.App -c Release -r win-x64 --self-contained false -o publish
+
+      - name: Remove debug symbols
+        shell: pwsh
+        run: Get-ChildItem publish -Filter *.pdb | Remove-Item
+
+      - name: Upload unsigned build
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: publish
+
+      - name: Sign with SignPath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Zip and attach to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ver = "${{ inputs.tag }}"
+          $zip = "RobloxAltManager-$ver-win-x64.zip"
+          Compress-Archive -Path signed/* -DestinationPath $zip
+          gh release upload $ver $zip --clobber

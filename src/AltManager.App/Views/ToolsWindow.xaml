@@ -1,0 +1,320 @@
+<Window x:Class="AltManager.App.Views.ToolsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Tools" Width="820" Height="600" MinWidth="680" MinHeight="460"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource Bg}" Foreground="{DynamicResource Fg}">
+    <Window.Resources>
+        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+            <Setter Property="Margin" Value="0,5,0,3"/>
+        </Style>
+        <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource Label}">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,2,0,6"/>
+        </Style>
+        <Style x:Key="Warn" TargetType="TextBlock" BasedOn="{StaticResource Note}">
+            <Setter Property="Foreground" Value="#F0B232"/>
+        </Style>
+        <Style x:Key="Rule" TargetType="Border">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource Line}"/>
+            <Setter Property="Margin" Value="0,12"/>
+        </Style>
+        <Style x:Key="Num" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Width" Value="52"/>
+            <Setter Property="Margin" Value="8,0,6,0"/>
+        </Style>
+        <Style x:Key="Row" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="Margin" Value="0,4,0,2"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="14,10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Cancel" Click="Cancel_Click" MinWidth="80"/>
+                    <Button Content="Save" Style="{StaticResource AccentButton}" Click="Save_Click" MinWidth="80" IsDefault="True"/>
+                </StackPanel>
+                <TextBlock x:Name="FooterText" VerticalAlignment="Center" Foreground="{DynamicResource Muted}" FontSize="12"/>
+            </DockPanel>
+        </Border>
+
+        <TabControl x:Name="Tabs" Style="{StaticResource SideTabs}">
+
+            <!-- ================= Performance ================= -->
+            <TabItem Header="Performance" Style="{StaticResource SideTab}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="MAX ALTS MODE" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Only the client you're looking at runs at full speed. Every other client drops to idle priority with Windows power throttling, and its memory is trimmed now and then. Switch windows and the new one speeds up straight away."/>
+                        <CheckBox Content="Turn on Max alts" IsChecked="{Binding MaxAlts}"/>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="Trim background clients' memory every" VerticalAlignment="Center"/>
+                            <TextBox Style="{StaticResource Num}" Text="{Binding MaxAltsTrimMinutes}"/>
+                            <TextBlock Text="min (0 = never)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
+                        </StackPanel>
+
+                        <Border Style="{StaticResource Rule}"/>
+
+                        <TextBlock Text="GRAPHICS" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Written to Roblox's ClientAppSettings.json before each launch. Roblox only honours flags on its allow-list, so some of these may do nothing on newer clients. Low-resource mode in Settings still caps FPS on top of this."/>
+                        <CheckBox x:Name="GfxEnabled" Content="Apply these graphics settings to clients I launch" IsChecked="{Binding Graphics.Enabled}"/>
+                        <TextBlock Text="Presets" Style="{StaticResource Label}"/>
+                        <WrapPanel>
+                            <Button Content="Potato" Click="Preset_Click" Tag="Potato" ToolTip="Everything off, 15 FPS. For 20+ alts."/>
+                            <Button Content="Low" Click="Preset_Click" Tag="Low" ToolTip="Low quality, 30 FPS"/>
+                            <Button Content="Balanced" Click="Preset_Click" Tag="Balanced" ToolTip="Mid quality, 60 FPS"/>
+                            <Button Content="High" Click="Preset_Click" Tag="High" ToolTip="High quality, 4x AA, 144 FPS"/>
+                            <Button Content="Ultra" Click="Preset_Click" Tag="Ultra" ToolTip="Max quality, 8x AA, uncapped"/>
+                            <Button Content="Reset" Click="Preset_Click" Tag="Auto" ToolTip="Back to Roblox's defaults"/>
+                        </WrapPanel>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="140"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="FPS cap (0 = uncapped)" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding Graphics.FpsCap}" Margin="0,3"/>
+                            <TextBlock Grid.Column="3" Text="Quality" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="4" x:Name="QualityBox" SelectedValuePath="Content" SelectedValue="{Binding Graphics.Quality}" Margin="0,3"/>
+                            <TextBlock Grid.Row="1" Text="Anti-aliasing" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="1" Grid.Column="1" SelectedValuePath="Content" SelectedValue="{Binding Graphics.AntiAliasing}" Margin="0,3">
+                                <ComboBoxItem Content="Auto"/><ComboBoxItem Content="Off"/><ComboBoxItem Content="2x"/><ComboBoxItem Content="4x"/><ComboBoxItem Content="8x"/>
+                            </ComboBox>
+                            <TextBlock Grid.Row="1" Grid.Column="3" Text="Textures" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="1" Grid.Column="4" SelectedValuePath="Content" SelectedValue="{Binding Graphics.Textures}" Margin="0,3">
+                                <ComboBoxItem Content="Auto"/><ComboBoxItem Content="Low"/><ComboBoxItem Content="Medium"/><ComboBoxItem Content="High"/>
+                            </ComboBox>
+                            <TextBlock Grid.Row="2" Text="Graphics API" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="2" Grid.Column="1" SelectedValuePath="Content" SelectedValue="{Binding Graphics.GraphicsApi}" Margin="0,3">
+                                <ComboBoxItem Content="Auto"/><ComboBoxItem Content="Direct3D 11"/><ComboBoxItem Content="Vulkan"/><ComboBoxItem Content="OpenGL"/>
+                            </ComboBox>
+                        </Grid>
+                        <WrapPanel Margin="0,4,0,0">
+                            <CheckBox Content="No grass" IsChecked="{Binding Graphics.NoGrass}" Margin="0,5,18,3"/>
+                            <CheckBox Content="Plain gray sky" IsChecked="{Binding Graphics.GraySky}" Margin="0,5,18,3"/>
+                            <CheckBox Content="No shadows" IsChecked="{Binding Graphics.NoShadows}" Margin="0,5,18,3"/>
+                        </WrapPanel>
+
+                        <Border Style="{StaticResource Rule}"/>
+
+                        <TextBlock Text="RAM CLEANER" Style="{StaticResource Heading}"/>
+                        <TextBlock x:Name="RamText" Margin="0,6,0,4" FontSize="13"/>
+                        <WrapPanel>
+                            <Button Content="Clean clients now" Click="CleanRam_Click" ToolTip="Trims every Roblox client's working set (no admin needed)"/>
+                            <Button Content="Deep clean (admin)" Click="DeepClean_Click" ToolTip="Also flushes Windows' standby list and modified pages. Shows a Windows admin prompt."/>
+                        </WrapPanel>
+                        <CheckBox Content="Clean automatically when memory use is high" IsChecked="{Binding AutoRamClean}" Margin="0,8,0,3"/>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="When RAM use reaches" VerticalAlignment="Center"/>
+                            <TextBox Style="{StaticResource Num}" Text="{Binding RamCleanPercent}"/>
+                            <TextBlock Text="% (at most every 5 min)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= Windows ================= -->
+            <TabItem Header="Windows" Style="{StaticResource SideTab}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="CLIENT WINDOWS" Style="{StaticResource Heading}"/>
+                        <CheckBox Content="Borderless windows (no title bar or frame)" IsChecked="{Binding Borderless}"/>
+                        <CheckBox Content="Allow windows smaller than 800×600 (fits more clients on screen)" IsChecked="{Binding AllowSmallWindows}"/>
+                        <CheckBox Content="Rename each window to its account name" IsChecked="{Binding RenameWindows}"/>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="Gap between windows when arranging" VerticalAlignment="Center"/>
+                            <TextBox Style="{StaticResource Num}" Text="{Binding LayoutGap}"/>
+                            <TextBlock Text="px" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
+                        </StackPanel>
+
+                        <Border Style="{StaticResource Rule}"/>
+
+                        <TextBlock Text="CLIENT LIMIT" Style="{StaticResource Heading}"/>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="Keep at most" VerticalAlignment="Center"/>
+                            <TextBox Style="{StaticResource Num}" Text="{Binding MaxClients}"/>
+                            <TextBlock Text="clients open (0 = no limit)" VerticalAlignment="Center" Foreground="{DynamicResource Muted}"/>
+                        </StackPanel>
+                        <CheckBox Content="When the limit is hit, close the oldest client to make room" IsChecked="{Binding AutoClosePrevious}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Without this, a launch only opens as many clients as still fit."/>
+
+                        <Border Style="{StaticResource Rule}"/>
+
+                        <TextBlock Text="PINNED WINDOWS" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Pin a client from the 📌 button in Active clients or on the Monitor page. A pinned window snaps back to its spot and size if it moves, and Arrange leaves it alone."/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="PinnedText" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <Button Content="Unpin all" Click="UnpinAll_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= Crash breaker ================= -->
+            <TabItem Header="Crash breaker" Style="{StaticResource SideTab}">
+                <StackPanel>
+                    <TextBlock Text="CRASH BREAKER" Style="{StaticResource Heading}"/>
+                    <TextBlock Style="{StaticResource Note}" Text="Auto-rejoin (turn it on in Settings) relaunches a client that closes on its own. If a client keeps crashing, the breaker trips and stops rejoining that account for a while, so a broken game doesn't loop forever."/>
+                    <TextBlock x:Name="RejoinState" Margin="0,2,0,8"/>
+                    <StackPanel Style="{StaticResource Row}">
+                        <TextBlock Text="Trip after" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding RejoinMaxAttempts}"/>
+                        <TextBlock Text="restarts within" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding RejoinWindowMinutes}"/>
+                        <TextBlock Text="minutes" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Style="{StaticResource Row}">
+                        <TextBlock Text="Then pause auto-rejoin for" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding RejoinCooldownMinutes}"/>
+                        <TextBlock Text="minutes" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+
+            <!-- ================= Hotkeys ================= -->
+            <TabItem Header="Hotkeys" Style="{StaticResource SideTab}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBlock Text="GLOBAL HOTKEYS" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="These work even while a game has focus. Click a box and press the keys (needs Ctrl, Alt, Shift or Win). Backspace or Delete clears it."/>
+                    </StackPanel>
+                    <Button DockPanel.Dock="Bottom" Content="Reset to defaults" HorizontalAlignment="Left" Click="ResetHotkeys_Click" Margin="0,8,0,0"/>
+                    <ItemsControl x:Name="HotkeyList" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,3">
+                                    <TextBox DockPanel.Dock="Right" Width="200" Text="{Binding Keys, Mode=OneWay}" IsReadOnly="True"
+                                             PreviewKeyDown="HotkeyBox_KeyDown" ToolTip="Click, then press the key combo" Cursor="Hand"/>
+                                    <TextBlock Text="{Binding Action}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ================= Setups ================= -->
+            <TabItem Header="Setups" Style="{StaticResource SideTab}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBlock Text="SETUPS" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="A setup remembers which accounts are open, the game and server each is in, where each window sits, and your Max alts / borderless / anti-AFK / graphics choices. Run it later to bring the whole thing back in one click."/>
+                        <DockPanel Margin="0,4,0,8">
+                            <Button DockPanel.Dock="Right" Content="Save running clients as setup" Style="{StaticResource AccentButton}" Click="SaveSetup_Click"/>
+                            <TextBox x:Name="SetupName" Margin="0,0,8,0" ToolTip="Setup name"/>
+                        </DockPanel>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="Run on startup" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="StartupSetupBox" Width="220" Margin="8,0,0,0" SelectionChanged="StartupSetup_Changed"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Background="{DynamicResource Panel}" CornerRadius="6" Margin="0,8,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="SetupList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="10,6">
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Content="Run" Style="{StaticResource AccentButton}" Click="RunSetup_Click"/>
+                                                <Button Content="✕" Padding="8,2" Click="DeleteSetup_Click" ToolTip="Delete setup"/>
+                                            </StackPanel>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource Muted}" FontSize="11" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ================= Anti-AFK ================= -->
+            <TabItem Header="Anti-AFK" Style="{StaticResource SideTab}">
+                <StackPanel>
+                    <TextBlock Text="ANTI-AFK" Style="{StaticResource Heading}"/>
+                    <TextBlock Style="{StaticResource Note}" Text="Roblox disconnects players after about 20 minutes idle. Every few minutes this brings each client forward for a split second, sends one small input, and puts your window and cursor back."/>
+                    <TextBlock Style="{StaticResource Warn}" Text="Automating input may break a game's rules or Roblox's Terms of Use. Use it at your own risk."/>
+                    <CheckBox Content="Keep my clients from going idle" IsChecked="{Binding AntiAfk}"/>
+                    <StackPanel Style="{StaticResource Row}">
+                        <TextBlock Text="Every" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding AntiAfkMinutes}"/>
+                        <TextBlock Text="minutes, using" VerticalAlignment="Center"/>
+                        <ComboBox Width="140" Margin="8,0,0,0" SelectedValuePath="Content" SelectedValue="{Binding AntiAfkMode}">
+                            <ComboBoxItem Content="Mouse nudge"/>
+                            <ComboBoxItem Content="Jump"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0" Text="Mouse nudge doesn't move your character. Jump presses Space once."/>
+                </StackPanel>
+            </TabItem>
+
+            <!-- ================= Macro ================= -->
+            <TabItem Header="Macro" Style="{StaticResource SideTab}">
+                <StackPanel>
+                    <TextBlock Text="MACRO RECORDER" Style="{StaticResource Heading}"/>
+                    <TextBlock Style="{StaticResource Note}" Text="Records your mouse and keyboard and plays it back with the same timing. Use the hotkeys (Ctrl+Alt+R record, Ctrl+Alt+P play by default) so you can start and stop it from inside a game."/>
+                    <TextBlock Style="{StaticResource Warn}" Text="Macros send real input to whatever window is in front. Automating gameplay may break Roblox's Terms of Use."/>
+                    <TextBlock x:Name="MacroText" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,8"/>
+                    <WrapPanel>
+                        <Button x:Name="RecordBtn" Content="● Record" Click="Record_Click"/>
+                        <Button x:Name="PlayBtn" Content="▶ Play" Style="{StaticResource AccentButton}" Click="Play_Click"/>
+                        <Button Content="Save…" Click="SaveMacro_Click"/>
+                        <Button Content="Load…" Click="LoadMacro_Click"/>
+                    </WrapPanel>
+                    <StackPanel Style="{StaticResource Row}" Margin="0,10,0,2">
+                        <TextBlock Text="Repeat" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding MacroLoops}"/>
+                        <TextBlock Text="times (0 = until stopped), speed" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding MacroSpeed}"/>
+                        <TextBlock Text="×" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Note}" Text="Loops and speed take effect after you press Save."/>
+                </StackPanel>
+            </TabItem>
+
+            <!-- ================= Discord ================= -->
+            <TabItem Header="Discord" Style="{StaticResource SideTab}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="RICH PRESENCE" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Shows 'Running N clients' on your Discord profile. Talks only to the Discord app on this PC. You need a free Application ID: discord.com/developers/applications → New Application → copy the Application ID."/>
+                        <CheckBox Content="Show Alt Manager on my Discord profile" IsChecked="{Binding DiscordRpc}"/>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="Application ID" VerticalAlignment="Center" Width="110"/>
+                            <TextBox Width="260" Text="{Binding DiscordAppId}"/>
+                            <Button Content="Open developer portal" Click="DevPortal_Click" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock x:Name="RpcStatus" Style="{StaticResource Note}"/>
+
+                        <Border Style="{StaticResource Rule}"/>
+
+                        <TextBlock Text="WEBHOOK ALERTS" Style="{StaticResource Heading}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Posts alerts to a Discord channel. In Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL. Treat the URL like a password."/>
+                        <DockPanel Margin="0,2,0,4">
+                            <Button DockPanel.Dock="Right" Content="Send test" Click="TestWebhook_Click" Margin="8,0,0,0"/>
+                            <TextBox x:Name="WebhookBox" Text="{Binding WebhookUrl}"/>
+                        </DockPanel>
+                        <CheckBox Content="A client closes unexpectedly" IsChecked="{Binding WebhookOnCrash}"/>
+                        <CheckBox Content="The crash breaker trips" IsChecked="{Binding WebhookOnBreaker}"/>
+                        <CheckBox Content="A check finds expired accounts" IsChecked="{Binding WebhookOnExpired}"/>
+                        <CheckBox Content="A client starts" IsChecked="{Binding WebhookOnLaunch}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

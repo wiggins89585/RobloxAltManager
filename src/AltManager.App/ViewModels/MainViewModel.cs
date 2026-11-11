@@ -125,7 +125,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             RecordPlayTime(p);
             PersistWindowBounds(p.AccountId);
             if (_userClosed.Remove(p.AccountId)) { /* closed on purpose — don't rejoin */ }
-            else MaybeRejoin(p.AccountId);
+            else { NotifyCrash(p.AccountId); MaybeRejoin(p.AccountId); }
         });
         _boundsPoll.Interval = TimeSpan.FromSeconds(3);
         _boundsPoll.Tick += (_, _) =>
@@ -150,6 +150,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         _localApi = new LocalApiServer(this);
         ApplyLocalApiSettings();
         _ = RefreshStaleInfoAsync(); // Robux / Premium / age show without a manual refresh
+        InitTools();
     }
 
     // ---------------- Presence (online / in-game dots) ----------------
@@ -290,6 +291,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         if (_settings.AutoValidateOnStartup && Accounts.Count > 0)
             await ValidateAllAsync();
         await RefreshPresencesAsync();
+        await RunStartupSetupAsync();
     }
 
     /// <summary>Persist remembered view/group; called when the window closes.</summary>
@@ -654,6 +656,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             StatusMessage = $"{valid} valid, {expired} expired" + (banned > 0 ? $", {banned} banned." : ".");
             Log(banned > 0 || expired > 0 ? ActivityLevel.Warn : ActivityLevel.Info,
                 $"Validated accounts: {valid} valid, {expired} expired, {banned} banned.");
+            if (expired > 0 && Tools.WebhookOnExpired)
+                Webhook("Expired accounts", $"{expired} account(s) need to log in again.", 0xF0B232);
         });
 
         // Optionally offer to re-login the ones that just expired (opt-in). A "No" is remembered for
@@ -1514,6 +1518,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     private async Task LaunchAccountsAsync(IReadOnlyList<AccountViewModel> accounts, LaunchTarget target)
     {
         if (IsLaunching) { Log(ActivityLevel.Warn, "Launch skipped — another launch is already running."); return; }
+        accounts = ApplyClientLimit(accounts.ToList());
+        if (accounts.Count == 0) return;
         if (!_guard.IsActive && !_guard.Acquire() && accounts.Count > 1)
         {
             Log(ActivityLevel.Warn, "Launch skipped — multi-instance mode is off (close all Roblox windows).");
@@ -1534,7 +1540,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         try
         {
             await _engine.LaunchBatchAsync(accounts.Select(a => a.Model).ToList(), target,
-                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap }, progress, _launchCts.Token);
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap, Graphics = _settings.Tools.Graphics }, progress, _launchCts.Token);
         }
         finally
         {
@@ -1735,6 +1741,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
 
     private async Task RunApiBatchAsync(List<AccountViewModel> accounts, Dictionary<Guid, LaunchTarget> targets)
     {
+        accounts = ApplyClientLimit(accounts);
+        if (accounts.Count == 0) return;
         RecordGameHistory(targets.Values.Select(t => t.PlaceId));
         foreach (var kv in targets) { _lastTarget[kv.Key] = kv.Value; _userClosed.Remove(kv.Key); }
 
@@ -1748,7 +1756,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         try
         {
             await _engine.LaunchBatchAsync(accounts.Select(a => a.Model).ToList(), a => targets[a.Id],
-                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap },
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap, Graphics = _settings.Tools.Graphics },
                 progress, _launchCts.Token);
         }
         catch { /* logged via progress; API already acknowledged */ }
@@ -1832,6 +1840,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     {
         var accounts = AccountsView.Cast<AccountViewModel>().Where(a => a.IsSelected).ToList();
         if (accounts.Count == 0) { StatusMessage = "Select at least one account."; return; }
+        accounts = ApplyClientLimit(accounts);
+        if (accounts.Count == 0) { StatusMessage = $"Client limit reached ({Tools.MaxClients} open)."; return; }
 
         // Each account goes to its own game if it has one, otherwise to the Launch panel's game.
         var targets = new Dictionary<Guid, LaunchTarget>();
@@ -1881,7 +1891,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         {
             await _engine.LaunchBatchAsync(
                 accounts.Select(a => a.Model).ToList(), a => targets[a.Id],
-                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap },
+                new LaunchOptions { StaggerDelay = TimeSpan.FromSeconds(Math.Max(0, StaggerSeconds)), OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap, Graphics = _settings.Tools.Graphics },
                 progress, _launchCts.Token);
             StatusMessage = "Batch finished.";
         }
@@ -1938,8 +1948,9 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     [RelayCommand]
     private void ArrangeWindows()
     {
-        var hwnds = ActiveProcesses.Select(p => p.MainWindow).ToList();
-        var n = WindowArranger.Arrange(hwnds, GridColumns > 0 ? GridColumns : null);
+        // Pinned windows keep their spot; everything else is tiled (smaller than 800x600 if allowed).
+        var hwnds = ActiveProcesses.Where(p => !Tools.Pinned.ContainsKey(p.AccountId)).Select(p => p.MainWindow).ToList();
+        var n = RobloxWindows.Arrange(hwnds, GridColumns > 0 ? GridColumns : null, Math.Max(0, Tools.LayoutGap), Tools.AllowSmallWindows);
         StatusMessage = n == 0 ? "No game windows found yet." : $"Arranged {n} window(s).";
     }
 
@@ -1978,12 +1989,8 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
         var vm = Accounts.FirstOrDefault(a => a.Model.Id == accountId);
         if (vm is null) return;
 
-        // At most 3 rejoins in a 5-minute window, so a crash-loop doesn't spin forever.
-        var now = DateTime.UtcNow;
-        var b = _rejoinBudget.TryGetValue(accountId, out var x) ? x : (Count: 0, Since: now);
-        if ((now - b.Since).TotalMinutes > 5) b = (0, now);
-        if (b.Count >= 3) { StatusMessage = $"{vm.Label}: auto-rejoin paused (too many restarts)."; return; }
-        _rejoinBudget[accountId] = (b.Count + 1, b.Since);
+        // Crash breaker: too many restarts in a short time pauses auto-rejoin for a cooldown.
+        if (!CrashBreakerAllows(vm)) return;
         _ = RejoinAsync(vm, target);
     }
 
@@ -1998,7 +2005,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
             var v = Accounts.FirstOrDefault(a => a.Model.Id == pr.Account.Id);
             if (v is not null) v.LaunchState = pr.Stage.ToString();
         });
-        try { await _engine.LaunchAsync(vm.Model, target, new LaunchOptions { OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap }, progress); } catch { /* best effort */ }
+        try { await _engine.LaunchAsync(vm.Model, target, new LaunchOptions { OptimizeClient = _settings.OptimizeClient, FpsCap = _settings.OptimizeFpsCap, Graphics = _settings.Tools.Graphics }, progress); } catch { /* best effort */ }
     }
 
     // ---------------- Helpers ----------------
@@ -2067,6 +2074,7 @@ public partial class MainViewModel : ObservableObject, IDisposable, ILocalApiBac
     public void Dispose()
     {
         foreach (var p in ActiveProcesses) RecordPlayTime(p); // clients still open when the app closes
+        DisposeTools();
         _boundsPoll.Stop();
         _presencePoll.Stop();
         _scheduleTimer.Stop();

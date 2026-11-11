@@ -45,6 +45,113 @@ public sealed class GameHistoryEntry
     public List<AccountPlayTime> Plays { get; set; } = new();
 }
 
+/// <summary>Graphics overrides written to Roblox's ClientAppSettings.json (read when a client starts).</summary>
+public sealed class GraphicsSettings
+{
+    public bool Enabled { get; set; }
+    public int FpsCap { get; set; }                       // 0 = leave alone
+    public string Quality { get; set; } = "Auto";         // Auto, 1..10
+    public string AntiAliasing { get; set; } = "Auto";    // Auto, Off, 2x, 4x, 8x
+    public string Textures { get; set; } = "Auto";        // Auto, Low, Medium, High
+    public string GraphicsApi { get; set; } = "Auto";     // Auto, Direct3D 11, Vulkan, OpenGL
+    public bool NoGrass { get; set; }
+    public bool GraySky { get; set; }
+    public bool NoShadows { get; set; }
+}
+
+/// <summary>A global hotkey: an action name and a key combo such as "Ctrl+Alt+M".</summary>
+public sealed class HotkeyBinding
+{
+    public string Action { get; set; } = "";
+    public string Keys { get; set; } = "";
+}
+
+/// <summary>One account in a saved setup: where it goes and where its window sits.</summary>
+public sealed class SetupAccount
+{
+    public Guid AccountId { get; set; }
+    public string Label { get; set; } = "";
+    public long PlaceId { get; set; }
+    public string? JobId { get; set; }
+    public string? LinkCode { get; set; }
+    public Models.SavedWindowBounds? Bounds { get; set; }
+}
+
+/// <summary>A whole-setup snapshot: accounts, their games and window spots, and the tool switches.</summary>
+public sealed class SavedSetup
+{
+    public string Name { get; set; } = "";
+    public List<SetupAccount> Accounts { get; set; } = new();
+    public bool MaxAlts { get; set; }
+    public bool Borderless { get; set; }
+    public bool AntiAfk { get; set; }
+    public bool LowResource { get; set; }
+    public GraphicsSettings Graphics { get; set; } = new();
+}
+
+/// <summary>Settings for the Tools window (performance, windows, automation, Discord).</summary>
+public sealed class ToolsSettings
+{
+    // Performance
+    public bool MaxAlts { get; set; }
+    public int MaxAltsTrimMinutes { get; set; } = 5;     // trim background clients' memory this often (0 = never)
+    public GraphicsSettings Graphics { get; set; } = new();
+    public bool AutoRamClean { get; set; }
+    public int RamCleanPercent { get; set; } = 85;
+
+    // Windows
+    public bool Borderless { get; set; }
+    public bool AllowSmallWindows { get; set; } = true;
+    public bool RenameWindows { get; set; } = true;
+    public int LayoutGap { get; set; } = 4;
+    public int MaxClients { get; set; }                   // 0 = no limit
+    public bool AutoClosePrevious { get; set; }
+    public Dictionary<Guid, Models.SavedWindowBounds> Pinned { get; set; } = new();
+
+    // Crash breaker (auto-rejoin)
+    public int RejoinMaxAttempts { get; set; } = 3;
+    public int RejoinWindowMinutes { get; set; } = 5;
+    public int RejoinCooldownMinutes { get; set; } = 10;
+
+    // Hotkeys
+    public List<HotkeyBinding> Hotkeys { get; set; } = DefaultHotkeys();
+
+    public static List<HotkeyBinding> DefaultHotkeys() => new()
+    {
+        new() { Action = "Show Alt Manager", Keys = "Ctrl+Alt+M" },
+        new() { Action = "Arrange windows", Keys = "Ctrl+Alt+A" },
+        new() { Action = "Minimize all clients", Keys = "Ctrl+Alt+H" },
+        new() { Action = "Launch selected", Keys = "" },
+        new() { Action = "Close all clients", Keys = "" },
+        new() { Action = "Toggle Max alts", Keys = "" },
+        new() { Action = "Toggle anti-AFK", Keys = "" },
+        new() { Action = "Record / stop macro", Keys = "Ctrl+Alt+R" },
+        new() { Action = "Play / stop macro", Keys = "Ctrl+Alt+P" },
+    };
+
+    // Setups
+    public List<SavedSetup> Setups { get; set; } = new();
+    public string StartupSetup { get; set; } = "";
+
+    // Anti-AFK
+    public bool AntiAfk { get; set; }
+    public int AntiAfkMinutes { get; set; } = 15;
+    public string AntiAfkMode { get; set; } = "Mouse nudge";   // Mouse nudge, Jump
+
+    // Macro
+    public int MacroLoops { get; set; } = 1;          // 0 = repeat until stopped
+    public double MacroSpeed { get; set; } = 1.0;
+
+    // Discord
+    public bool DiscordRpc { get; set; }
+    public string DiscordAppId { get; set; } = "";
+    public string WebhookUrl { get; set; } = "";
+    public bool WebhookOnCrash { get; set; } = true;
+    public bool WebhookOnBreaker { get; set; } = true;
+    public bool WebhookOnExpired { get; set; } = true;
+    public bool WebhookOnLaunch { get; set; }
+}
+
 /// <summary>
 /// Non-secret app preferences, stored in plaintext next to the vault. Nothing here is
 /// sensitive (no cookies/passwords) — those stay in the encrypted vault.
@@ -102,6 +209,8 @@ public sealed class AppSettings
     public bool LocalApiEnabled { get; set; }
     public int LocalApiPort { get; set; } = 7963;
     public string LocalApiToken { get; set; } = "";
+
+    public ToolsSettings Tools { get; set; } = new();
 
     public List<LaunchPreset> Presets { get; set; } = new();
     public List<GameHistoryEntry> GameHistory { get; set; } = new();

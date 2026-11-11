@@ -31,23 +31,82 @@ public static class ClientOptimizer
         catch { /* process already gone */ }
     }
 
-    /// <summary>Writes (or clears) the FPS-cap / low-graphics FFlags for every installed client version.
-    /// <paramref name="fpsCap"/> ≤ 0 leaves the FPS uncapped.</summary>
-    public static void SyncFFlags(bool lowResource, int fpsCap)
+    /// <summary>Runs a client at normal priority without power throttling (undoes Max alts / low-resource).</summary>
+    public static void Restore(int pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById(pid);
+            try { p.PriorityClass = ProcessPriorityClass.Normal; } catch { }
+            try { SetEcoQoS(p.Handle, false); } catch { }
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Max alts: the client you're playing on runs at full speed; every other one gets Idle priority and
+    /// Windows' efficiency mode, so a dozen background clients barely touch the CPU.
+    /// </summary>
+    public static void SetBackground(int pid, bool background)
+    {
+        try
+        {
+            using var p = Process.GetProcessById(pid);
+            var want = background ? ProcessPriorityClass.Idle : ProcessPriorityClass.Normal;
+            try { if (p.PriorityClass != want) p.PriorityClass = want; } catch { }
+            try { SetEcoQoS(p.Handle, background); } catch { }
+        }
+        catch { }
+    }
+
+    /// <summary>The flags a graphics configuration asks for (Roblox ignores any it no longer allows).</summary>
+    public static Dictionary<string, object> GraphicsFlags(GraphicsSettings g)
+    {
+        var f = new Dictionary<string, object>();
+        if (g.FpsCap > 0) f["DFIntTaskSchedulerTargetFps"] = g.FpsCap;
+        if (int.TryParse(g.Quality, out var q) && q is >= 1 and <= 10) f["DFIntDebugFRMQualityLevelOverride"] = q;
+        switch (g.AntiAliasing)
+        {
+            case "Off": f["FIntDebugForceMSAASamples"] = 0; break;
+            case "2x": f["FIntDebugForceMSAASamples"] = 2; break;
+            case "4x": f["FIntDebugForceMSAASamples"] = 4; break;
+            case "8x": f["FIntDebugForceMSAASamples"] = 8; break;
+        }
+        if (g.Textures is "Low" or "Medium" or "High")
+        {
+            f["DFFlagTextureQualityOverrideEnabled"] = true;
+            f["DFIntTextureQualityOverride"] = g.Textures switch { "Low" => 0, "Medium" => 1, _ => 3 };
+        }
+        switch (g.GraphicsApi)
+        {
+            case "Direct3D 11": f["FFlagDebugGraphicsPreferD3D11"] = true; break;
+            case "Vulkan": f["FFlagDebugGraphicsPreferVulkan"] = true; break;
+            case "OpenGL": f["FFlagDebugGraphicsPreferOpenGL"] = true; break;
+        }
+        if (g.NoGrass)
+        {
+            f["FIntFRMMinGrassDistance"] = 0;
+            f["FIntFRMMaxGrassDistance"] = 0;
+            f["FIntRenderGrassDetailStrands"] = 0;
+        }
+        if (g.GraySky) f["FFlagDebugSkyGray"] = true;
+        if (g.NoShadows) f["FIntRenderShadowIntensity"] = 0;
+        return f;
+    }
+
+    /// <summary>Writes (or clears) the client FFlags for every installed client version: low-resource mode
+    /// (lowest quality + FPS cap) and/or the user's graphics settings. Nothing to write = file removed.</summary>
+    public static void SyncFFlags(bool lowResource, int fpsCap, GraphicsSettings? graphics = null)
     {
         if (!Directory.Exists(VersionsFolder)) return;
 
-        string? json = null;
+        var flags = graphics is { Enabled: true } ? GraphicsFlags(graphics) : new Dictionary<string, object>();
         if (lowResource)
         {
-            var flags = new Dictionary<string, object>
-            {
-                // 1 = lowest graphics quality level; biggest single GPU saving.
-                ["DFIntDebugFRMQualityLevelOverride"] = 1,
-            };
-            if (fpsCap > 0) flags["DFIntTaskSchedulerTargetFps"] = fpsCap; // cap the frame rate
-            json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
+            flags["DFIntDebugFRMQualityLevelOverride"] = 1; // lowest quality: biggest single GPU saving
+            if (fpsCap > 0) flags["DFIntTaskSchedulerTargetFps"] = fpsCap;
         }
+        string? json = flags.Count == 0 ? null : JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
 
         foreach (var dir in Directory.GetDirectories(VersionsFolder))
         {
@@ -87,13 +146,15 @@ public static class ClientOptimizer
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool SetProcessInformation(IntPtr hProcess, int informationClass, ref ProcessPowerThrottlingState info, int size);
 
-    private static void EnableEcoQoS(IntPtr handle)
+    private static void EnableEcoQoS(IntPtr handle) => SetEcoQoS(handle, true);
+
+    private static void SetEcoQoS(IntPtr handle, bool on)
     {
         var state = new ProcessPowerThrottlingState
         {
             Version = PowerThrottlingCurrentVersion,
             ControlMask = ExecutionSpeed,
-            StateMask = ExecutionSpeed, // 1 = throttle this process
+            StateMask = on ? ExecutionSpeed : 0, // set = throttle this process, clear = full speed
         };
         SetProcessInformation(handle, ProcessPowerThrottling, ref state, Marshal.SizeOf<ProcessPowerThrottlingState>());
     }

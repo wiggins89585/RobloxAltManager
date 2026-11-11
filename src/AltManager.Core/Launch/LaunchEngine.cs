@@ -22,6 +22,8 @@ public sealed class LaunchOptions
     public bool OptimizeClient { get; init; }
     /// <summary>FPS cap used in low-resource mode; 0 = uncapped.</summary>
     public int FpsCap { get; init; } = 20;
+    /// <summary>The user's graphics overrides (Tools &gt; Performance), written alongside low-resource flags.</summary>
+    public GraphicsSettings? Graphics { get; init; }
 }
 
 /// <summary>
@@ -53,7 +55,7 @@ public sealed class LaunchEngine
 
         // Sync the FPS-cap / low-graphics FFlags to the current setting before the client starts
         // (Roblox reads them at launch). Clears them again when low-resource mode is off.
-        ClientOptimizer.SyncFFlags(options.OptimizeClient, options.FpsCap);
+        ClientOptimizer.SyncFFlags(options.OptimizeClient, options.FpsCap, options.Graphics);
 
         if (!_guard.IsActive && _tracker.Active.Count > 0)
             progress?.Report(new(account, LaunchStage.Starting,
