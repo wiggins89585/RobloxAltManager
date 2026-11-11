@@ -55,6 +55,21 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <!-- Icon-only toolbar button (label lives in the tooltip). -->
+        <Style x:Key="ToolbarIcon" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <!-- Main destinations (Tools, Monitor): stand out from the other buttons. -->
+        <Style x:Key="ToolbarAccent" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="Background" Value="{DynamicResource Selection}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
         <!-- Thin divider between toolbar groups. -->
         <Style x:Key="ToolbarSep" TargetType="Border">
             <Setter Property="Width" Value="1"/>
@@ -195,57 +210,65 @@
         <!-- ================= Actions toolbar (account actions left · app tools right) ================= -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource Bg}" Padding="8,2,8,6"
                 BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
-            <!-- All toolbar buttons in one horizontal strip; scroll with the mouse wheel when the
-                 window is too narrow to show them all. The scrollbar itself is hidden to keep it clean. -->
-            <ScrollViewer x:Name="ToolbarScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
-                          PreviewMouseWheel="Toolbar_PreviewMouseWheel">
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Cookie" Tag="&#xE710;" Style="{StaticResource ToolbarButton}" Command="{Binding ImportCookiesCommand}"
-                            ToolTip="Import .ROBLOSECURITY cookies"/>
-                    <Button Content="Login" Tag="&#xE77B;" Style="{StaticResource ToolbarButton}" Command="{Binding BrowserLoginCommand}"
-                            ToolTip="Browser login (use when Roblox shows a verification puzzle)"/>
-                    <Button Content="Create" Tag="&#xE8FA;" Style="{StaticResource ToolbarButton}" Command="{Binding CreateAccountCommand}"
-                            ToolTip="Create a new Roblox account in a browser window"/>
-                    <Button Content="Bulk" Tag="&#xE716;" Style="{StaticResource ToolbarButton}" Command="{Binding BulkLoginCommand}"
-                            ToolTip="Log in several accounts from a user:pass list or a browser password export"/>
-                    <Border Style="{StaticResource ToolbarSep}"/>
-                    <Button Content="Validate" Tag="&#xE73E;" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
-                            ToolTip="Re-check every account's cookie"/>
-                    <Button Content="Re-login" Tag="&#xE72C;" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
-                            ToolTip="Re-login expired accounts that have a saved password"/>
-                    <Border Style="{StaticResource ToolbarSep}"/>
-                    <Button Content="Move banned" Tag="&#xE8DE;" Style="{StaticResource ToolbarButton}" Command="{Binding MovePermBannedCommand}"
-                            ToolTip="Move permanently banned accounts to the Banned group"/>
-                    <Button Content="Remove" Tag="&#xE74D;" Style="{StaticResource ToolbarDanger}" Command="{Binding RemoveSelectedCommand}"
-                            ToolTip="Remove the checked accounts from the vault"/>
-                    <Button Content="Remove banned" Tag="&#xE894;" Style="{StaticResource ToolbarDanger}" Command="{Binding RemovePermBannedCommand}"
-                            ToolTip="Remove permanently banned accounts (temporary bans are kept)"/>
-                    <Border Style="{StaticResource ToolbarSep}"/>
-                    <Button Content="History" Tag="&#xE81C;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenGameHistoryCommand}"
-                            ToolTip="Games you've launched (click one to reuse it)"/>
-                    <Button Tag="&#xE7C3;" Command="{Binding OpenActivityLogCommand}" Style="{StaticResource ToolbarButton}"
-                            ToolTip="Activity log / notifications">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Log"/>
-                            <TextBlock Text=" ●" Foreground="{DynamicResource Danger}"
-                                       Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Content="Schedules" Tag="&#xE787;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenSchedulesCommand}"
-                            ToolTip="Scheduled launches"/>
-                    <Button Content="Monitor" Tag="&#xE9D9;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenMonitorCommand}"
+            <!-- Left: account actions (scrolls if the window is very narrow).
+                 Right: app tools, always visible so Tools / Monitor / Settings are never off-screen. -->
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                    <Button Content="Monitor" Tag="&#xE9D9;" Style="{StaticResource ToolbarAccent}" Command="{Binding OpenMonitorCommand}"
                             ToolTip="Live CPU, RAM and previews of every running client"/>
-                    <Button Content="Tools" Tag="&#xE90F;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenToolsCommand}"
-                            ToolTip="Max alts, graphics, RAM cleaner, window tools, hotkeys, setups, anti-AFK, macro, Discord"/>
+                    <Button Content="Tools" Tag="&#xE90F;" Style="{StaticResource ToolbarAccent}" Command="{Binding OpenToolsCommand}"
+                            ToolTip="Max alts, graphics, RAM cleaner, window tools, client limit, crash breaker, hotkeys, setups, anti-AFK, macro, Discord"/>
                     <Border Style="{StaticResource ToolbarSep}"/>
-                    <Button Content="Streamer" Tag="&#xE890;" Style="{StaticResource ToolbarButton}" Command="{Binding ToggleStreamerCommand}"
-                            ToolTip="Mask or show usernames and IDs (streamer mode)"/>
-                    <Button Content="Lock" Tag="&#xE72E;" Style="{StaticResource ToolbarButton}" Command="{Binding LockCommand}"
+                    <Button Content="&#xE81C;" Style="{StaticResource ToolbarIcon}" Command="{Binding OpenGameHistoryCommand}"
+                            ToolTip="Game history: games you've launched (click one to reuse it)"/>
+                    <Button Content="&#xE787;" Style="{StaticResource ToolbarIcon}" Command="{Binding OpenSchedulesCommand}"
+                            ToolTip="Scheduled launches"/>
+                    <Button Style="{StaticResource ToolbarIcon}" Command="{Binding OpenActivityLogCommand}"
+                            ToolTip="Activity log / notifications">
+                        <Grid>
+                            <TextBlock Text="&#xE7C3;"/>
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource Danger}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                     Margin="0,-3,-5,0" Visibility="{Binding HasUnread, Converter={StaticResource BoolVis}}"/>
+                        </Grid>
+                    </Button>
+                    <Button Content="&#xE890;" Style="{StaticResource ToolbarIcon}" Command="{Binding ToggleStreamerCommand}"
+                            ToolTip="Streamer mode: mask or show usernames and IDs"/>
+                    <Button Content="&#xE72E;" Style="{StaticResource ToolbarIcon}" Command="{Binding LockCommand}"
                             ToolTip="Lock the app (Ctrl+L)"/>
                     <Button Content="Settings" Tag="&#xE713;" Style="{StaticResource ToolbarButton}" Command="{Binding OpenSettingsCommand}" Margin="0"
                             ToolTip="Open settings"/>
                 </StackPanel>
-            </ScrollViewer>
+
+                <ScrollViewer x:Name="ToolbarScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                              PreviewMouseWheel="Toolbar_PreviewMouseWheel">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Add account ▾" Tag="&#xE8FA;" Style="{StaticResource ToolbarButton}" Click="AddAccountMenu_Click"
+                                ToolTip="Import a cookie, log in, bulk login or create a new account">
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Import cookie…" Command="{Binding ImportCookiesCommand}"
+                                              ToolTip="Paste .ROBLOSECURITY cookies"/>
+                                    <MenuItem Header="Log in with browser…" Command="{Binding BrowserLoginCommand}"
+                                              ToolTip="Use when Roblox shows a verification puzzle"/>
+                                    <MenuItem Header="Bulk login…" Command="{Binding BulkLoginCommand}"
+                                              ToolTip="Several accounts from a user:pass list or a browser password export"/>
+                                    <Separator/>
+                                    <MenuItem Header="Create new account…" Command="{Binding CreateAccountCommand}"
+                                              ToolTip="Create a new Roblox account in a browser window"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Border Style="{StaticResource ToolbarSep}"/>
+                        <Button Content="Validate" Tag="&#xE73E;" Style="{StaticResource ToolbarButton}" Command="{Binding ValidateAllCommand}"
+                                ToolTip="Re-check every account's cookie"/>
+                        <Button Content="Re-login" Tag="&#xE72C;" Style="{StaticResource ToolbarButton}" Command="{Binding RefreshExpiredCommand}"
+                                ToolTip="Re-login expired accounts that have a saved password"/>
+                        <Border Style="{StaticResource ToolbarSep}"/>
+                        <Button Content="Remove" Tag="&#xE74D;" Style="{StaticResource ToolbarDanger}" Command="{Binding RemoveSelectedCommand}"
+                                ToolTip="Remove the checked accounts from the vault"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
 
         <!-- ================= Status bar (counts always; message when busy) ================= -->
@@ -662,12 +685,14 @@
                                 <TextBlock Text="Grid columns (0 = auto)" Style="{StaticResource Label}" Margin="0"
                                            VerticalAlignment="Center"/>
                             </DockPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <Button Content="▦ Arrange Windows" Command="{Binding ArrangeWindowsCommand}"/>
-                                <Button Content="Minimize All" Command="{Binding MinimizeAllCommand}"
+                            <UniformGrid Columns="3" Margin="0,8,0,0">
+                                <Button Content="Arrange" Padding="4,4" Margin="0,0,3,0" Command="{Binding ArrangeWindowsCommand}"
+                                        ToolTip="Tile every client window in a grid"/>
+                                <Button Content="Minimize" Padding="4,4" Margin="3,0,3,0" Command="{Binding MinimizeAllCommand}"
                                         ToolTip="Minimize every client window"/>
-                                <Button Content="Close All" Command="{Binding KillAllCommand}"/>
-                            </StackPanel>
+                                <Button Content="Close all" Padding="4,4" Margin="3,0,0,0" Command="{Binding KillAllCommand}"
+                                        ToolTip="Close every client"/>
+                            </UniformGrid>
                             <WrapPanel Margin="0,8,0,0">
                                 <CheckBox Content="Max alts" IsChecked="{Binding MaxAltsOn}" Margin="0,0,14,0" Foreground="{DynamicResource Fg}"
                                           ToolTip="Only the window you're using runs at full speed; the rest are throttled"/>

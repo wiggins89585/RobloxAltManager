@@ -171,6 +171,16 @@ public partial class MainWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     /// <summary>Let the mouse wheel scroll the toolbar horizontally when it overflows.</summary>
+    /// <summary>Opens the Add account dropdown under its button.</summary>
+    private void AddAccountMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { ContextMenu: { } menu } b) return;
+        menu.PlacementTarget = b;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.DataContext = b.DataContext;
+        menu.IsOpen = true;
+    }
+
     private void Toolbar_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is not System.Windows.Controls.ScrollViewer sv || sv.ScrollableWidth <= 0) return;
