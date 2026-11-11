@@ -145,6 +145,10 @@ public sealed class ToolsSettings
     // Discord
     public bool DiscordRpc { get; set; }
     public string DiscordAppId { get; set; } = "";
+    /// <summary>Watching / Playing / Competing. Discord shows only one "Playing" app at a time, so Watching is the default.</summary>
+    public string DiscordActivityType { get; set; } = "Watching";
+    public bool DiscordShowGame { get; set; } = true;       // game name + icon while clients run
+    public bool DiscordShowButton { get; set; } = true;     // "Get Alt Manager" button (others see it)
     public string WebhookUrl { get; set; } = "";
     public bool WebhookOnCrash { get; set; } = true;
     public bool WebhookOnBreaker { get; set; } = true;

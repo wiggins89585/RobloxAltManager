@@ -53,7 +53,7 @@ public partial class ToolsWindow : Window
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MainViewModel.MemoryText) or nameof(MainViewModel.MacroStatus) or nameof(MainViewModel.StatusMessage))
+        if (e.PropertyName is nameof(MainViewModel.MemoryText) or nameof(MainViewModel.MacroStatus) or nameof(MainViewModel.StatusMessage) or nameof(MainViewModel.DiscordStatus))
             RefreshLive();
     }
 

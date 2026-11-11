@@ -298,6 +298,17 @@
                             <TextBox Width="260" Text="{Binding DiscordAppId}"/>
                             <Button Content="Open developer portal" Click="DevPortal_Click" Margin="8,0,0,0"/>
                         </StackPanel>
+                        <StackPanel Style="{StaticResource Row}">
+                            <TextBlock Text="Show as" VerticalAlignment="Center" Width="110"/>
+                            <ComboBox Width="140" SelectedValuePath="Content" SelectedValue="{Binding DiscordActivityType}">
+                                <ComboBoxItem Content="Watching"/>
+                                <ComboBoxItem Content="Playing"/>
+                                <ComboBoxItem Content="Competing"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <CheckBox Content="Show the game and its icon while alts are running" IsChecked="{Binding DiscordShowGame}"/>
+                        <CheckBox Content="Add a &quot;Get Alt Manager&quot; button (other people see it, you don't)" IsChecked="{Binding DiscordShowButton}"/>
+                        <TextBlock Style="{StaticResource Note}" Text="Discord shows only one 'Playing' app at a time, so if another app (a game, VS Code…) already shows as Playing, Alt Manager won't appear. 'Watching' avoids that."/>
                         <TextBlock x:Name="RpcStatus" Style="{StaticResource Note}"/>
 
                         <Border Style="{StaticResource Rule}"/>

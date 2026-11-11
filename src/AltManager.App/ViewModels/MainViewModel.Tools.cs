@@ -56,6 +56,11 @@ public partial class MainViewModel
         _toolsTimer.Start();
         Macro.StateChanged += () => OnUi(UpdateMacroStatus);
         _tracker.ProcessStarted += (_, p) => OnUi(() => OnClientStarted(p));
+        _discord.StatusChanged += s =>
+        {
+            Log(s.StartsWith("Showing") || s.StartsWith("Connected") || s == "Off" ? ActivityLevel.Info : ActivityLevel.Warn, "Discord: " + s);
+            OnUi(() => OnPropertyChanged(nameof(DiscordStatus)));
+        };
         ApplyRamText();
     }
 
@@ -140,16 +145,95 @@ public partial class MainViewModel
         if (Tools.DiscordRpc && !string.IsNullOrWhiteSpace(Tools.DiscordAppId))
         {
             _discordWasOn = true;
-            var running = procs.Count;
-            _ = _discord.UpdateAsync(Tools.DiscordAppId.Trim(),
-                running == 0 ? "Idle" : $"Running {running} client{(running == 1 ? "" : "s")}",
-                $"{Accounts.Count} accounts");
+            _ = _discord.UpdateAsync(Tools.DiscordAppId.Trim(), BuildPresence(procs));
         }
         else if (_discordWasOn)
         {
             _discordWasOn = false;
             _ = _discord.ClearAsync();
         }
+    }
+
+    // ---------------- Discord card ----------------
+
+    private const string AppIconUrl =
+        "https://raw.githubusercontent.com/wiggins89585/RobloxAltManager/main/src/AltManager.App/Assets/RobloxAltManager.png";
+    private const string ReleasesUrl = "https://github.com/wiggins89585/RobloxAltManager/releases/latest";
+    private readonly Dictionary<long, string> _gameNames = new();
+    private readonly Dictionary<long, string> _gameIcons = new();
+    private readonly HashSet<long> _gameLookups = new();
+
+    /// <summary>The profile card: game icon + name while clients run, the app logo while idle.</summary>
+    private DiscordRpc.Activity BuildPresence(List<TrackedProcess> procs)
+    {
+        var version = typeof(MainViewModel).Assembly.GetName().Version?.ToString(3);
+        var appText = $"Alt Manager v{version}";
+        var button = Tools.DiscordShowButton ? "Get Alt Manager" : null;
+        var valid = Accounts.Count(a => a.Status == AccountStatus.Valid);
+
+        if (procs.Count == 0)
+            return new DiscordRpc.Activity(
+                Details: "Idle — no alts running",
+                State: $"{Accounts.Count} accounts · {valid} ready",
+                Type: Tools.DiscordActivityType,
+                LargeImage: AppIconUrl, LargeText: appText,
+                ButtonLabel: button, ButtonUrl: ReleasesUrl);
+
+        var alts = procs.Count == 1 ? "1 alt" : $"{procs.Count} alts";
+        var since = procs.Min(p => p.Started).ToUnixTimeSeconds();
+        var games = procs.Select(p => _lastTarget.TryGetValue(p.AccountId, out var t) ? t.PlaceId : 0)
+                         .Where(id => id > 0).GroupBy(id => id).OrderByDescending(g => g.Count()).ToList();
+
+        string? gameName = null, gameIcon = null;
+        if (Tools.DiscordShowGame && games.Count > 0)
+        {
+            var top = games[0].Key;
+            LookUpGame(top);
+            _gameNames.TryGetValue(top, out gameName);
+            _gameIcons.TryGetValue(top, out gameIcon);
+        }
+
+        var details = gameName is not null ? gameName : $"Running {alts}";
+        var state = gameName is null ? $"{valid} of {Accounts.Count} accounts ready"
+                  : games.Count > 1 ? $"Running {alts} in {games.Count} games"
+                  : $"Running {alts}";
+        var max = Tools.MaxClients > 0 ? Tools.MaxClients : Math.Max(procs.Count, Accounts.Count);
+
+        return new DiscordRpc.Activity(
+            Details: details,
+            State: state,
+            Type: Tools.DiscordActivityType,
+            Start: since,
+            LargeImage: gameIcon ?? AppIconUrl, LargeText: gameName ?? appText,
+            SmallImage: gameIcon is not null ? AppIconUrl : null, SmallText: gameIcon is not null ? appText : null,
+            PartySize: procs.Count, PartyMax: max,
+            ButtonLabel: button, ButtonUrl: ReleasesUrl);
+    }
+
+    /// <summary>Fetches a game's name and icon once (in the background); the card picks them up next tick.</summary>
+    private void LookUpGame(long placeId)
+    {
+        if (!_gameLookups.Add(placeId)) return;
+        var known = _settings.GameHistory.FirstOrDefault(g => g.PlaceId == placeId)?.Name;
+        if (!string.IsNullOrWhiteSpace(known)) _gameNames[placeId] = known;
+        string? cookie = null;
+        foreach (var a in Accounts) { try { cookie = _vault.GetCookie(a.Model); break; } catch { } }
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var icons = await _api.GetPlaceIconsAsync(new[] { placeId });
+                var names = _gameNames.ContainsKey(placeId) || cookie is null
+                    ? new Dictionary<long, string>()
+                    : await _api.GetPlaceNamesAsync(new[] { placeId }, cookie);
+                OnUi(() =>
+                {
+                    if (icons.TryGetValue(placeId, out var i)) _gameIcons[placeId] = i;
+                    if (names.TryGetValue(placeId, out var n)) _gameNames[placeId] = n;
+                });
+            }
+            catch { _gameLookups.Remove(placeId); }
+        });
     }
 
     private MemoryCleaner.MemoryStatus ApplyRamText()
