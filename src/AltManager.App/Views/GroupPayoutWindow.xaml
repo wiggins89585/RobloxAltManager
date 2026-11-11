@@ -9,7 +9,28 @@
                    Foreground="{DynamicResource Muted}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"/>
 
         <TextBlock Text="Payer (group owner account)" Style="{StaticResource Label}"/>
-        <ComboBox x:Name="PayerBox" DisplayMemberPath="Label"/>
+        <!-- An explicit template: the app's ComboBox style shows the item itself in the closed box, so
+             DisplayMemberPath alone printed the class name there. Type a name to jump to it. -->
+        <ComboBox x:Name="PayerBox" Height="28" IsTextSearchEnabled="True" TextSearch.TextPath="Label" MaxDropDownHeight="320">
+            <ComboBox.ItemContainerStyle>
+                <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                </Style>
+            </ComboBox.ItemContainerStyle>
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="Robux" Text="{Binding RobuxText, StringFormat='{}  ·  {0} R$'}" Foreground="{DynamicResource Muted}"/>
+                    </StackPanel>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding RobuxValue}" Value="-1">
+                            <Setter TargetName="Robux" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
 
         <TextBlock Text="Group ID" Style="{StaticResource Label}"/>
         <DockPanel>
